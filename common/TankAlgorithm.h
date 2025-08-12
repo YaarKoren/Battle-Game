@@ -2,8 +2,7 @@
 
 #include <functional>
 #include <memory>
-
-class ActionRequest;
+#include "ActionRequest.h"
 class BattleInfo;
 
 class TankAlgorithm {
