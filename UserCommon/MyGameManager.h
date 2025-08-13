@@ -16,6 +16,10 @@ public:
     TankAlgorithmFactory player1_tank_algo_factory,
     TankAlgorithmFactory player2_tank_algo_factory) override;
 
+    bool getVerbose () const {return verbose_;}
+
+
+
 private:
     bool verbose_;
     // you can add extra members here
