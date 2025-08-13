@@ -13,6 +13,8 @@ public:
 };
 
 using TankAlgorithmFactory =
-std::function<std::unique_ptr<TankAlgorithm>(int player_index, int tank_index)>;
+std::function<std::unique_ptr<TankAlgorithm>
+(int player_index, int tank_index)>;
+
 
 

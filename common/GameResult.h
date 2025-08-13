@@ -13,4 +13,3 @@ struct GameResult {
     std::unique_ptr<SatelliteView> gameState; // at end of game
     size_t rounds; // total number of rounds
 };
-
