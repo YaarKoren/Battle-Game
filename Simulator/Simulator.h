@@ -27,4 +27,16 @@
 #include "CmdArgsParser.h"
 
 
+class Simulator {
+public:
+    explicit Simulator(CmdArgsParser::CmdArgs args);
+    ~Simulator() = default;
+
+    int run();                     // decides comparative vs competitive
+
+private:
+    int runComparative();          // non-static, uses args_
+    int runCompetitive();          // non-static, uses args_
+    CmdArgsParser::CmdArgs args_;
+};
 
