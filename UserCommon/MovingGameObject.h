@@ -3,6 +3,9 @@
 #include "GameObject.h"
 #include "Position.h"
 #include "Direction.h"
+#include "UserCommonNamespace.h"
+
+USERCOMMON_BEGIN
 
 class MovingGameObject : public GameObject {
 public:
@@ -15,3 +18,5 @@ public:
 protected:
     Direction dir_;
 };
+
+USERCOMMON_END

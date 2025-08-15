@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../common/AbstractGameManager.h"
+#include "../UserCommon/UserCommonNamespace.h"
 
-namespace GameManager_207177197_301251571 {
 
 class GameManager_207177197_301251571 : public AbstractGameManager {
 public:
@@ -27,4 +27,3 @@ private:
     // you can add extra members here
 };
 
-}

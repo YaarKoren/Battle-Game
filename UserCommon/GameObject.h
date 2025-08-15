@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Position.h"
+#include "UserCommonNamespace.h"
+
+USERCOMMON_BEGIN
 
 class GameObject {
 public:
@@ -18,3 +21,5 @@ protected:
     Position pos_;
     bool destroyed_ = false;
 };
+
+USERCOMMON_END

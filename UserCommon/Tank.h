@@ -8,7 +8,9 @@
 #include "Direction.h"
 #include "../common/TankAlgorithm.h"
 #include "../common/ActionRequest.h"
+#include "UserCommonNamespace.h"
 
+USERCOMMON_BEGIN
 
 class Tank : public MovingGameObject {
 public:
@@ -99,6 +101,7 @@ private:
 
 };
 
+USERCOMMON_END
 
 
 

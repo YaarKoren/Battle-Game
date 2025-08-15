@@ -7,7 +7,9 @@
 #include "../common/BattleInfo.h"
 #include "../common/SatelliteView.h"
 #include "Direction.h"
+#include "UserCommonNamespace.h"
 
+USERCOMMON_BEGIN
 
 class MyBattleInfo : public BattleInfo {
 public:
@@ -30,3 +32,5 @@ private:
     int playerIndex_;
     std::pair<size_t, size_t> selfPos_;
 };
+
+USERCOMMON_END

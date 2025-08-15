@@ -3,7 +3,9 @@
 #include <vector>
 
 #include "../common/SatelliteView.h"
+#include "UserCommonNamespace.h"
 
+USERCOMMON_BEGIN
 
 class SatelliteViewImpl : public SatelliteView {
 public:
@@ -17,3 +19,5 @@ public:
 private:
     std::vector<std::vector<char>> board_;
 };
+
+USERCOMMON_END

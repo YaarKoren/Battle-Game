@@ -3,6 +3,9 @@
 #include "MovingGameObject.h"
 #include "Position.h"
 #include "Direction.h"
+#include "UserCommonNamespace.h"
+
+USERCOMMON_BEGIN
 
 class Shell : public MovingGameObject {
 public:
@@ -17,3 +20,4 @@ private:
     int tankId_ = 0;
 };
 
+USERCOMMON_END

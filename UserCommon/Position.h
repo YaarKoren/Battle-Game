@@ -1,5 +1,9 @@
 #pragma once
 
+#include "UserCommonNamespace.h"
+
+USERCOMMON_BEGIN
+
 class Position {
 public:
     // Default constructor
@@ -44,3 +48,5 @@ private:
 };
 
 
+
+USERCOMMON_END

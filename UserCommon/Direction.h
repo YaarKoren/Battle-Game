@@ -1,4 +1,7 @@
 #pragma once
+#include "UserCommonNamespace.h"
+
+USERCOMMON_BEGIN
 
 enum class Direction {
     Up,
@@ -10,3 +13,5 @@ enum class Direction {
     DownLeft,
     DownRight
 };
+
+USERCOMMON_END

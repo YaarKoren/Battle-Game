@@ -1,5 +1,7 @@
 #include "SatelliteViewImpl.h"
 
+USERCOMMON_BEGIN
+
 SatelliteViewImpl::SatelliteViewImpl(const std::vector<std::vector<char>>& boardData)
         : board_(boardData) {}
 
@@ -9,3 +11,5 @@ char SatelliteViewImpl::getObjectAt(size_t x, size_t y) const {
     }
     return board_[y][x];
 }
+
+USERCOMMON_END

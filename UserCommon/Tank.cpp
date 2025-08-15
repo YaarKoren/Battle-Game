@@ -4,6 +4,8 @@
 
 #include "Tank.h"
 
+USERCOMMON_BEGIN
+
 Tank::Tank(Position pos, Direction dir, int playerId, int id)
     : MovingGameObject(pos, dir), playerId_(playerId), id_(id) {}
 
@@ -337,3 +339,5 @@ void Tank::setNextAction(ActionRequest action)
 void Tank::setLastAction(ActionRequest action) {
     lastAction_ = action;
 }
+
+USERCOMMON_END

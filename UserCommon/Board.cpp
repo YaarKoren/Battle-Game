@@ -1,6 +1,8 @@
 #include <algorithm>
 
-#include "../UserCommon/Board.h"
+#include "Board.h"
+
+USERCOMMON_BEGIN
 
 
 Board::Board(int w, int h) : width_(w), height_(h) {
@@ -58,3 +60,5 @@ void Board::removeObject(GameObject* objToRemove, Position pos) {
             cell.end()
     );
 }
+
+USERCOMMON_END

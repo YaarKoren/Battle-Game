@@ -1,5 +1,7 @@
 #include "MyBattleInfo.h"
 
+USERCOMMON_BEGIN
+
 MyBattleInfo::MyBattleInfo(const SatelliteView& view, int playerIndex, size_t rows,
                            size_t cols, std::pair<size_t, size_t> selfPos)
         : battlefield_(rows, std::vector<char>(cols, ' ')),
@@ -43,3 +45,5 @@ Direction MyBattleInfo::inferSelfDirection() const {
 
     return (playerIndex_ == 1) ? Direction::Right : Direction::Left;
 }
+
+USERCOMMON_END

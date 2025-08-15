@@ -1,5 +1,7 @@
 #include "Shell.h"
 
+USERCOMMON_BEGIN
+
 Shell::Shell(Position pos, Direction dir, int tankId)
     : MovingGameObject(pos, dir), tankId_(tankId) {}
 
@@ -32,3 +34,4 @@ bool Shell::moveForward() {
     return true;  // Move completed successfully
 }
 
+USERCOMMON_END

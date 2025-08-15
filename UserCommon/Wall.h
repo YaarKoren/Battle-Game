@@ -1,6 +1,9 @@
 #pragma once
 
 #include "GameObject.h"
+#include "UserCommonNamespace.h"
+
+USERCOMMON_BEGIN
 
 class Wall : public GameObject {
 public:
@@ -19,4 +22,4 @@ private:
     int lifeLeft_ = TIMES_TO_HIT_BEFORE_GONE;
 };
 
-
+USERCOMMON_END
