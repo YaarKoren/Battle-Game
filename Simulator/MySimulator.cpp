@@ -23,33 +23,6 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
-MapArgs readMap(const std::string& mapPath)
-{
-    //check if mapPath exists and can open - if not, print usage+err msg
-
-    // returns  0- success,
-    //returns 1- problem during reading. what to do in this case? finish also?
-
-    //get relevant params from map, to pass them to Game Manager:
-    //size_t map_width, size_t map_height,
-    //const SatelliteView& map, // <= a snapshot, NOT updated
-    //string map_name,
-    //size_t max_steps, size_t num_shells,
-    //players name, algos- we don't get them from map
-
-
-
-
-    size_t width=0, height=0, maxSteps=0, numShells=0;
-    std::unique_ptr<SatelliteView> initialView;
-
-    if (readMap(mapPath) == 1)
-    {
-        //what to do
-    }
-    return 0;
-};
-
 int MySimulator::run() {
   if (args_.mode_ == Mode::Comparative) {
     MySimulator::runComparative();
@@ -72,13 +45,8 @@ int MySimulator::runComparative() {
     const std::string algo2SO        = args_.algorithm2_so_filename_;
 
     // --- 0) Load the map snapshot and params from map file
-
-    auto mapArgs = readMap(mapPath);
-
-
-
-
-
+    MapParser mapParser;
+    auto mapArgs = mapParser.parse(mapPath); //prints msg and exits on bad args
 
     // --- 1) dlopen algorithm .so files (auto-registration happens here) ---
     const auto algosBefore   = RegistrationAPI::algosSize();

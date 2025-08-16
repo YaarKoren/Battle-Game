@@ -31,15 +31,29 @@ MapParser::MapArgs MapParser::parse(const std::string& filename)
         if (!line.empty()) lines.push_back(line);
     }
 
+    std::tie(args.map_name_,
+         args.map_width_,
+         args.map_height_,
+         args.max_steps_,
+         args.num_shells_) = MapParser::parseMetadata(lines);
+    args.map_ = MapParser::parseMap(lines, args.map_height_, args.map_width_);
 
+    return args;
+}
 
+//get metadata
+std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata (std::vector<std::string> lines)
+{
     if (lines.size() < 5) {
         ErrorMsg::error_and_usage("Map file missing metadata lines");
         exit(EXIT_FAILURE);
     }
 
-    // Parse metadata
-    args.map_name_ = lines[0];
+    std::string map_name = lines[0];
+
+    std::string line;
+
+    size_t max_steps, num_shells, map_height, map_width;
 
     int rows = 0, cols = 0;
     for (int i = 1; i <= 4; ++i) {
@@ -56,38 +70,39 @@ MapParser::MapArgs MapParser::parse(const std::string& filename)
         std::string value = line.substr(eqPos + 1);
         int val = std::stoi(value);
 
-        if (key == "MaxSteps")        args.max_steps_ = val;
-        else if (key == "NumShells")  args.num_shells_ = val;
-        else if (key == "Rows")       args.map_height_ = val;
-        else if (key == "Cols")       args.map_width_ = val;
+        if (key == "MaxSteps")        max_steps = val;
+        else if (key == "NumShells")  num_shells = val;
+        else if (key == "Rows")       map_height = val;
+        else if (key == "Cols")       map_width = val;
     }
 
-    //get satellite
-    std::vector<std::vector<char>> boardData(args.map_height_, std::vector<char>(args.map_width_));
+    return {map_name, map_width, map_height, max_steps, num_shells};
+}
 
-    for (int y = 0;  args.map_height_; ++y) {
+//get satellite
+UserCommon_207177197_301251571::SatelliteViewImpl parseMap(std::vector<std::string> lines, size_t height, size_t width)
+{
+    std::vector<std::vector<char>> boardData(height, std::vector<char>(width));
+
+    for (int y = 0;  y < height; ++y) {
         std::string rowLine = (5 + y < (int)lines.size()) ? lines[5 + y] : "";
-        if ((int)rowLine.length() < cols)
+        if ((int)rowLine.length() < width)
         {
-            rowLine += std::string(cols - rowLine.length(), ' ');
+            rowLine += std::string(width - rowLine.length(), ' ');
         }
-        else if ((int)rowLine.length() > cols)
+        else if ((int)rowLine.length() > width)
         {
-             rowLine = rowLine.substr(0, cols);
+            rowLine = rowLine.substr(0, width);
         }
 
-        for (int x = 0;  args.map_width_; ++x)
+        for (int x = 0; x < width; ++x)
         {
             boardData[y][x] = rowLine[x]; //boardData[row][column] → boardData[y][x]
-
         }
-
     }
-
-
-    args.map_ = UserCommon_207177197_301251571::SatelliteViewImpl(boardData);
-
-    return args;
+    return UserCommon_207177197_301251571::SatelliteViewImpl(boardData);
 }
+
+
 
 

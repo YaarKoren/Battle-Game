@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <tuple>
 
 #include "../common/SatelliteView.h"
 #include "../UserCommon/Board.h"
@@ -26,6 +27,6 @@ public:
     MapArgs parse(const std::string& filename);
 
 private:
-
-
+    std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata(std::vector<std::string> lines);
+    UserCommon_207177197_301251571::SatelliteViewImpl parseMap(std::vector<std::string> lines, size_t height, size_t width);
 };

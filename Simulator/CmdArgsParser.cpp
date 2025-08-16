@@ -20,7 +20,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
   if (hasComparative) {
       args.mode_ = Mode::Comparative;
 
-      //parse aregs for Comparative mode
+      //parse args for Comparative mode
       args.map_filename_ = getAndValidateFileName(argc, argv, "game_map");
       args.game_managers_folder_name_ = getAndValidateFileName(argc, argv, "game_managers_folder");
       args.algorithm1_so_filename_ = getAndValidateFileName(argc, argv, "algorithm1");
