@@ -5,8 +5,8 @@ MySimulator::MySimulator(CmdArgsParser::CmdArgs args)
 
 int main(int argc, char* argv[]) {
   std::cout << "1..2.. test\n";
-  //CmdArgsParser parser;
-  //auto args = parser.parse(argc, argv); //exits or throws on bad args
+  CmdArgsParser parser;
+  auto args = parser.parse(argc, argv); //exits or throws on bad args
 
   //Simulator sim(std::move(args));
   //int rc = sim.run();
