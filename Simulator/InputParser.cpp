@@ -7,6 +7,8 @@
 
 ////need to update to assigmnment 3
 
+using namespace UserCommon_207177197_301251571;
+
 InputParser::InputParser(const std::string& filename)
         : board_(1, 1), maxSteps_(0), numShells_(0) {
     std::ifstream file(filename);
