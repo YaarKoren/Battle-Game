@@ -3,6 +3,7 @@
 #include "../common/AbstractGameManager.h"
 #include "../UserCommon/UserCommonNamespace.h"
 
+namespace GameManager_207177197_301251571 {
 
 class MyGameManager : public AbstractGameManager {
 public:
@@ -24,6 +25,9 @@ public:
 
 private:
     bool verbose_;
-    // you can add extra members here
+
+    void readMapSnapshot(const SatelliteView& map);//use InputParser from ass2
+    void internalRun();
 };
 
+}

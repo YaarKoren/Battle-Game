@@ -14,15 +14,19 @@ struct SharedLib {
     explicit SharedLib(const std::string& path) {
         handle = dlopen(path.c_str(), RTLD_NOW);
         if (!handle) {
-            std::cerr << "[dlopen] " << path << " : " << dlerror() << "\n";
+            throw std::runtime_error("[dlopen] " + path + " : " + dlerror());
         }
     }
     ~SharedLib() { if (handle) dlclose(handle); }
 
+    //Copy operations are deleted
     SharedLib(const SharedLib&) = delete;
     SharedLib& operator=(const SharedLib&) = delete;
 
+    //Move constructor
     SharedLib(SharedLib&& o) noexcept : handle(std::exchange(o.handle, nullptr)) {}
+
+    //Move assignment operator
     SharedLib& operator=(SharedLib&& o) noexcept {
         if (this != &o) {
             if (handle) dlclose(handle);
@@ -31,5 +35,7 @@ struct SharedLib {
         return *this;
     }
 
+    //Boolean conversion operator
+    //Allows: if (lib) { /* lib loaded successfully */ }
     explicit operator bool() const { return handle != nullptr; }
 };

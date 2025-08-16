@@ -1,4 +1,5 @@
 #include "CmdArgsParser.h"
+#include "ErrorMsg.h"
 
 CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
   CmdArgs args;
@@ -7,12 +8,12 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
   const bool hasCompetition = hasFlag(argc, argv, "-competition");
 
   if (hasComparative && hasCompetition) {
-      error_and_usage("Choose exactly one mode (comparative or competition), can't have both");
+      ErrorMsg::error_and_usage("Choose exactly one mode (comparative or competition), can't have both");
       exit(EXIT_FAILURE);
   }
 
   if (!hasComparative && !hasCompetition) {
-      error_and_usage("Missing argument: simulation mode (comparative or competition)");
+      ErrorMsg::error_and_usage("Missing argument: simulation mode (comparative or competition)");
       exit(EXIT_FAILURE);
   }
 
@@ -40,7 +41,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
       // After parsing, verify no extras
       auto bad = collectUnsupportedArgs(argc, argv, exactFlags, kvPrefixes);
       if (!bad.empty()) {
-          error_and_usage("Unsupported arguments: " + joinArgs(bad));
+           ErrorMsg::error_and_usage("Unsupported arguments: " + joinArgs(bad));
           exit(EXIT_FAILURE);
       }
 
@@ -49,7 +50,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
   else { //competition
       args.mode_ = Mode::Competitive;
 
-      //parse aregs for Competitive mode
+      //parse args for Competitive mode
       args.maps_folder_name_ = getAndValidateFileName(argc, argv, "game_maps_folder");
       args.game_manager_so_name_ = getAndValidateFileName(argc, argv, "game_manager_so_filename");
       args.algos_folder_name_ = getAndValidateFileName(argc, argv, "algorithms_folder");
@@ -70,7 +71,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
       // After parsing, verify no extras
       auto bad = collectUnsupportedArgs(argc, argv, exactFlags, kvPrefixes);
       if (!bad.empty()) {
-          error_and_usage("Unsupported arguments: " + joinArgs(bad));
+           ErrorMsg::error_and_usage("Unsupported arguments: " + joinArgs(bad));
           exit(EXIT_FAILURE);
       }
   }
@@ -87,14 +88,14 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
         }
       }
       else {
-          error_and_usage("Illegal argument: num_threads value must be a positive integer");
+           ErrorMsg::error_and_usage("Illegal argument: num_threads value must be a positive integer");
           exit(EXIT_FAILURE);
       }
     }
   }
   //getFlagValue throws an error if the flag's value is missing
   catch (const std::exception& e) {
-    error_and_usage(e.what());
+     ErrorMsg::error_and_usage(e.what());
     exit(EXIT_FAILURE);
   }
   return args;
@@ -137,14 +138,14 @@ std::string CmdArgsParser::getAndValidateFileName(int argc, char* argv[], std::s
             return *val; //we will check if the name is legal (there is such file/folder, can be opoend, etc) when trying to open the files
         }
         else {
-            error_and_usage("Missing argument: " + fileName);
+             ErrorMsg::error_and_usage("Missing argument: " + fileName);
             exit(EXIT_FAILURE);
         }
     }
 
-    //getFlagValue throws an error if the flag's value is missing
+    //getFlagValue throws an error if the flag's value is missing (the flag is there, but its value is missing)
     catch (const std::exception& e) {
-        error_and_usage(e.what());
+        ErrorMsg::error_and_usage(e.what());
         exit(EXIT_FAILURE);
     }
 }
@@ -154,30 +155,6 @@ std::string CmdArgsParser::getAndValidateFileName(int argc, char* argv[], std::s
 
 
 
-//errors and usage printing//
-
-//usage printing
-//maybe print exact exe name instead of "./simulator_<submitter_ids>", using "exe"
-void CmdArgsParser::usage_msg(){
-    std::cerr <<
-          "Usage:\n"
-          "Comparative run:\n"
-          "./simulator_<submitter_ids> -comparative game_map=<game_map_filename>\n"
-          "      game_managers_folder=<game_managers_folder>\n"
-          "      algorithm1=<algorithm_so_filename> algorithm2=<algorithm_so_filename>\n"
-          "      [num_threads=<num>] [-verbose]\n"
-          "Competition run:\n"
-          "./simulator_<submitter_ids> -competition game_maps_folder=<game_maps_folder>\n"
-          "      game_manager=<game_manager_so_filename>\n"
-          "      algorithms_folder=<algorithms_folder>\n"
-          "      [num_threads=<num>] [-verbose]\n"
-          "\n";
-}
-
-void CmdArgsParser::error_and_usage(const std::string& msg) {
-    std::cerr << "Error: " << msg << "\n\n";
-    CmdArgsParser::usage_msg();
-}
 
 
 //helper functions to print list of unsupported args

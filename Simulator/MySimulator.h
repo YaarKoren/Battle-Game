@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <cstdlib>
 #include <optional>
+#include <filesystem>
 
 #include "../common/ActionRequest.h"
 #include "../common/BattleInfo.h"
@@ -18,13 +19,13 @@
 #include "../common/Player.h"
 #include "../common/AbstractGameManager.h"
 
-
 #include "AlgorithmRegistrar.h"
 #include "GameManagerRegistrar.h"
-//#include "SharedLibrary.h"              // cross-platform dlopen/LoadLibrary wrapper
+#include "SharedLib.h"              // cross-platform dlopen/LoadLibrary wrapper
 
 #include "Mode.h"
 #include "CmdArgsParser.h"
+#include "MapParser.h"
 
 
 class MySimulator {

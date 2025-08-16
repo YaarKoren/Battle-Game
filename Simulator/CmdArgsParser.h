@@ -21,7 +21,7 @@ public:
         std::string submitters_ids_;
         Mode mode_;
         bool verbose_ = false; //optional arg; verbose_ == true iff this flag is given
-        unsigned threads_num_ = 1; //optional arg; defualt is 1
+        unsigned threads_num_ = 1; //optional arg; default is 1
 
         //Comparative
         std::string map_filename_;
@@ -45,9 +45,6 @@ private:
     std::optional<std::string> getFlagValue(int argc, char* argv[], const std::string& flag);
     std::string getAndValidateFileName(int argc, char* argv[], std::string fileName);
 
-    //errors and usage printing//
-    static void usage_msg();
-    static void error_and_usage(const std::string& msg);
     //helper functions to print list of unsupported args
     static inline bool starts_with(const std::string& s, const std::string& prefix);
     std::vector<std::string> collectUnsupportedArgs(int argc, char* argv[],
