@@ -40,6 +40,9 @@ private:
     int runCompetitive();          // non-static, uses args_
     CmdArgsParser::CmdArgs args_;
 
-
+    //helper functions
+    static std::string getCleanFileName(const std::string& path);
+    static size_t loadAlgoAndPlayerAndGetIndex(const std::string& so_path,
+        std::vector<std::unique_ptr<SharedLib>>& open_libs);
 };
 
