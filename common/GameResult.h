@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-class SatelliteView;
+
 
 struct GameResult {
     int winner; // 0 = tie

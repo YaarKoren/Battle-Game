@@ -36,7 +36,7 @@ public:
 
     };
 
-    CmdArgs parse(int argc, char* argv[]);
+    static CmdArgs parse(int argc, char* argv[]);
 
 
 private:

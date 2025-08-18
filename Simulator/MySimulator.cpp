@@ -13,8 +13,7 @@ MySimulator::MySimulator(CmdArgsParser::CmdArgs args)
 
 int main(int argc, char* argv[]) {
   std::cout << "1..2.. test\n";
-  CmdArgsParser parser;
-  auto args = parser.parse(argc, argv); //prints msg and exits on bad args
+  auto args = CmdArgsParser::parse(argc, argv); //prints msg and exits on bad args
 
   //Simulator sim(std::move(args));
   //int rc = sim.run();
@@ -46,6 +45,13 @@ void MySimulator::runComparative() {
     // --- 0) Load the map snapshot and params from map file
     MapParser mapParser;
     const auto mapArgs = mapParser.parse(mapPath); //prints msg and exits on bad args
+    std::string map_name = mapArgs.map_name_;
+    size_t map_width = mapArgs.map_width_;
+    size_t map_height = mapArgs.map_height_;
+    size_t max_steps = mapArgs.max_steps_;
+    size_t num_shells = mapArgs.num_shells_;
+    UserCommon_207177197_301251571::SatelliteViewImpl map = mapArgs.map_;
+
 
     // --- 1) dlopen algorithm .so files (auto-registration happens here) ---
     // TODO make it a func
@@ -144,8 +150,8 @@ void MySimulator::runComparative() {
 
         //run game and
         GameResult game_result = GM->run(
-                mapArgs.map_width_, mapArgs.map_height_, mapArgs.map_, mapArgs.map_name_,
-                mapArgs.max_steps_, mapArgs.num_shells_,
+                map_width, map_height, map, map_name,
+                max_steps, num_shells,
                 *player1, getCleanFileName(algo1SO), *player1, getCleanFileName(algo2SO),
                 p1_algo_factory, p2_algo_factory);
 
@@ -155,8 +161,7 @@ void MySimulator::runComparative() {
     }
 
     // --- 4) format results and print them to the output file / screen ---
-    GameResulePrinter printer;
-    printer.printComparativeResults(name_and_results, managersFolder);
+    GameResulePrinter::printComparativeResults(name_and_results, managersFolder,map_width, map_height, max_steps);
 }
 
 
@@ -303,7 +308,7 @@ std::vector<size_t> MySimulator::loadTankAlgosAndPlayersFromDir(const std::strin
     if (files.empty()) ErrorMsg::error_and_usage("No .so files in Algorithm dir:  " + dir);
     std::vector<size_t> idxs;
     for (const auto& so : files) {
-        //TODO: add here try and catch
+        //TODO: add here try and catch or delete func if not used
         size_t idx = loadAlgoAndPlayerAndGetIndex(so, open_libs);   ////throws error if fails
         idxs.push_back(idx);    // remember indices
     }
@@ -319,7 +324,7 @@ std::vector<size_t> MySimulator::loadGMFromDir(const std::string& dir,
     if (files.empty()) ErrorMsg::error_and_usage("No .so files in Game Managers dir:  " + dir);
     std::vector<size_t> idxs;
     for (const auto& so : files) {
-        //TODO: add here try and catch
+        //TODO: add here try and catch or delete func if not used
         size_t idx = loadGameManagerAndGetIndex(so, open_libs);   //throws error if fails
 
         idxs.push_back(idx);    // remember indices
