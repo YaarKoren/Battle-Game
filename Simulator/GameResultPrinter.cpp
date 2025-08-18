@@ -2,7 +2,7 @@
 
 #include "GameResultPrinter.h"
 
-#define MAX_STEPS_AFTER_SHELLS_END = 40;
+#define MAX_STEPS_AFTER_SHELLS_END 40
 
 void GameResultPrinter::printComparativeResults(
     std::vector<GMNameAndResult> results,
