@@ -18,6 +18,7 @@
 #include "../common/TankAlgorithm.h"
 #include "../common/Player.h"
 #include "../common/AbstractGameManager.h"
+#include "../common/GameResult.h"
 
 #include "AlgorithmRegistrar.h"
 #include "GameManagerRegistrar.h"

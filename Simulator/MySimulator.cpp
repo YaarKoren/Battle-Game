@@ -53,9 +53,26 @@ void MySimulator::runComparative() {
                                                         // Keep SO handles alive for the entire match (RAII)
     algo_libs.reserve(2);
 
-    //load and validate (prints error msg and exits if fails)
-    const size_t idx1 = loadAlgoAndPlayerAndGetIndex(algo1SO, algo_libs);
-    const size_t idx2 = loadAlgoAndPlayerAndGetIndex(algo2SO, algo_libs);
+    size_t idx1, idx2;
+
+    //load and validate
+    try
+    {
+        idx1 = loadAlgoAndPlayerAndGetIndex(algo1SO, algo_libs);
+    }
+    catch (const std::exception& e)
+    {
+        ErrorMsg::error_and_usage(e.what());
+    }
+
+   try
+   {
+       idx2 = loadAlgoAndPlayerAndGetIndex(algo2SO, algo_libs);
+   }
+    catch (const std::exception& e)
+    {
+        ErrorMsg::error_and_usage(e.what());
+    }
 
     //Grab the two entries (we only need them by iterator; no private types leak)
     //it1, it2 are std::vector<AlgorithmAndPlayerFactories>::const_iterator.
@@ -102,7 +119,7 @@ void MySimulator::runComparative() {
         }
         catch (const std::exception& e)
         {
-            //TODO: figure what they want to do with the info that one file failed
+            //TODO: figure what they want us to do with the info that one file failed
             std::cerr << "Error: " << e.what() << "\n\n";
         }
     }
@@ -110,24 +127,42 @@ void MySimulator::runComparative() {
     size_t gm_num = idxs.size();
     if (gm_num == 0) ErrorMsg::error_and_usage("All .so files in Game Managers dir: " + managersFolder + "could not be loaded\n");
 
+
     // --- 3) Run each newly registered GameManager on the single map with both algos ---
-    std::vector<GameResult> results;
+    const auto& GMReg = GameManagerRegistrar::getGameManagerRegistrar();
+
+    struct GMNameAndResult
+    {
+        std::string& GM_name_;
+        GameResult& GM_result_;
+    };
+
+    std::vector<GMNameAndResult> name_and_results;
+
+    for (size_t idx : idxs)
+    {
+        auto it = GMReg.begin(); std::advance(it, static_cast<long>(idx));
+        //get the GM name
+        std::string name = it->name();
+        name = getCleanFileName(name);
+        //Create GM instance, using the registered factories
+        std::unique_ptr<AbstractGameManager> GM = it->createGameManager(verbose);
+
+        //run game and
+        GameResult game_result = GM->run(
+                mapArgs.map_width_, mapArgs.map_height_, mapArgs.map_, mapArgs.map_name_,
+                mapArgs.max_steps_, mapArgs.num_shells_,
+                *player1, getCleanFileName(algo1SO), *player1, getCleanFileName(algo2SO),
+                p1_algo_factory, p2_algo_factory);
 
 
+        //keep GM name and result
+        name_and_results.push_back({name, game_result});
+    }
 
 
-            //GameResult gr = gm->run(
-                //mapArgs.map_width_, mapArgs.map_height_, mapArgs.map_, mapArgs.map_name_,
-                //mapArgs.max_steps_, mapArgs.num_shells_,
-                //*p1, getCleanFileName(algo1SO), *p2, getCleanFileName(algo2SO),
-                //algoFactory1, algoFactory2
-            //);
+    // --- 4) format results and print them to the output file / screen ---
 
-            // TODO: collect results for grouping/printing as per your output spec
-            // (you can store gr in a vector and process after the loop)
-
-
-    // TODO: format and write the comparative results file per your exact spec.
 
 
 }
@@ -163,7 +198,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
 // Return index of the registrar entry that corresponds to this load.
 // If the SO is the same path as a previously-loaded one, don't dlopen again;
 // just return the existing entry index.
-// Validate the loading and registration, prints error msg and exits on failure to load/registrate
+// Validate the loading and registration, throws an error on failure to load/registrate
  size_t MySimulator::loadAlgoAndPlayerAndGetIndex(
     const std::string& so_path,
     std::vector<std::unique_ptr<SharedLib>>& open_libs // keep handles alive
@@ -189,8 +224,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
         open_libs.emplace_back(std::make_unique<SharedLib>(so_path));
     } catch (const std::exception& e) {
         reg.removeLast(); // rollback empty slot
-        ErrorMsg::error_and_usage("Failed to open Algorithm so file\n" + *e.what());  // print with the dlopen error text
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Failed to open Algorithm so file\n" + *e.what());  // with the dlopen error text
     }
 
     // Validate that both factories were provided by the .so
@@ -202,8 +236,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
         if (!bad.hasName) msg += " missing name;"; //should not happen; if path argument is missing in cmd args, we catch it before
         if (!bad.hasPlayerFactory) msg += " missing Player factory;";
         if (!bad.hasTankAlgorithmFactory) msg += " missing TankAlgorithm factory;";
-        ErrorMsg::error_and_usage("Failed to Register Algorithm so file: " + msg);  // print with the dlopen error text
-        exit(EXIT_FAILURE);
+         throw std::runtime_error("Failed to Register Algorithm so file: " + msg);
     }
 
     // Return the index of the newly validated entry (last)
@@ -278,10 +311,8 @@ std::vector<size_t> MySimulator::loadTankAlgosAndPlayersFromDir(const std::strin
     if (files.empty()) ErrorMsg::error_and_usage("No .so files in Algorithm dir:  " + dir);
     std::vector<size_t> idxs;
     for (const auto& so : files) {
-        size_t idx = loadAlgoAndPlayerAndGetIndex(so, open_libs);   //(prints error msg and exits if fails)
-        //TODO add here try and catch? and change the above function to throw
-        //cuz if one fails we can still go on with the rest
-        //keep track of failed ones? maybe in the output file?
+        //TODO: add here try and catch
+        size_t idx = loadAlgoAndPlayerAndGetIndex(so, open_libs);   ////throws error if fails
         idxs.push_back(idx);    // remember indices
     }
     return idxs;
@@ -296,8 +327,9 @@ std::vector<size_t> MySimulator::loadGMFromDir(const std::string& dir,
     if (files.empty()) ErrorMsg::error_and_usage("No .so files in Game Managers dir:  " + dir);
     std::vector<size_t> idxs;
     for (const auto& so : files) {
-        size_t idx = loadGameManagerAndGetIndex(so, open_libs);   //(prints error msg and exits if fails)
         //TODO: add here try and catch
+        size_t idx = loadGameManagerAndGetIndex(so, open_libs);   //throws error if fails
+
         idxs.push_back(idx);    // remember indices
     }
     return idxs;
