@@ -28,22 +28,22 @@ class GameManagerRegistrar {
         }
 
     };
-    std::vector<GMFactoryNamePair> GMfactories_;
+    std::vector<GMFactoryNamePair> GMFactories_;
     static GameManagerRegistrar registrar_;
 public:
     static GameManagerRegistrar& getGameManagerRegistrar();
     void createGMFactoryEntry(const std::string& name) {
-        GMfactories_.emplace_back(name);
+        GMFactories_.emplace_back(name);
     };
     void addGMFactoryToLastEntry(GameManagerFactory&& factory) {
-        GMfactories_.back().setGMFactory(std::move(factory));
+        GMFactories_.back().setGMFactory(std::move(factory));
     }
     struct BadRegistrationException {
         std::string name;
         bool hasName, hasGMFactory;
     };
     void validateLastRegistration() {
-        const auto& last = GMfactories_.back();
+        const auto& last = GMFactories_.back();
         bool hasName = (last.name() != "");
         if(!hasName || !last.hasGMFactory() ) {
             throw BadRegistrationException{
@@ -55,15 +55,15 @@ public:
         }
     }
     void removeLast() {
-        GMfactories_.pop_back();
+        GMFactories_.pop_back();
     }
     auto begin() const {
-        return GMfactories_.begin();
+        return GMFactories_.begin();
     }
     auto end() const {
-        return GMfactories_.end();
+        return GMFactories_.end();
     }
-    std::size_t count() const { return GMfactories_.size(); }
-    void clear() { GMfactories_.clear(); }
+    std::size_t count() const { return GMFactories_.size(); }
+    void clear() { GMFactories_.clear(); }
 
 };

@@ -36,13 +36,20 @@ public:
     int run();                     // decides comparative vs competitive
 
 private:
-    int runComparative();          // non-static, uses args_
-    int runCompetitive();          // non-static, uses args_
+    void runComparative();          // non-static, uses args_
+    void runCompetitive();          // non-static, uses args_
     CmdArgsParser::CmdArgs args_;
 
-    //helper functions
+    //helper functions to load algos ang GMs factories from so files
     static std::string getCleanFileName(const std::string& path);
     static size_t loadAlgoAndPlayerAndGetIndex(const std::string& so_path,
         std::vector<std::unique_ptr<SharedLib>>& open_libs);
+    static size_t loadGameManagerAndGetIndex(const std::string& so_path,
+        std::vector<std::unique_ptr<SharedLib>>& open_libs);
+    static std::vector<std::string> getSoFilesList(const std::string& dir_path);
+    static std::vector<size_t> loadTankAlgosAndPlayersFromDir(const std::string& dir,
+        std::vector<std::unique_ptr<SharedLib>>& open_libs);
+    static std::vector<size_t> loadGMFromDir(const std::string& dir,
+    std::vector<std::unique_ptr<SharedLib>>& open_libs);
 };
 
