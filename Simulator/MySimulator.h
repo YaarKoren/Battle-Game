@@ -27,6 +27,8 @@
 #include "Mode.h"
 #include "CmdArgsParser.h"
 #include "MapParser.h"
+#include "Utils.h"
+#include "GameResultPrinter.h"
 
 
 class MySimulator {
@@ -35,6 +37,7 @@ public:
     ~MySimulator() = default;
 
     int run();                     // decides comparative vs competitive
+
 
 private:
     void runComparative();          // non-static, uses args_

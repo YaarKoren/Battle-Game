@@ -131,12 +131,6 @@ void MySimulator::runComparative() {
     // --- 3) Run each newly registered GameManager on the single map with both algos ---
     const auto& GMReg = GameManagerRegistrar::getGameManagerRegistrar();
 
-    struct GMNameAndResult
-    {
-        std::string& GM_name_;
-        GameResult& GM_result_;
-    };
-
     std::vector<GMNameAndResult> name_and_results;
 
     for (size_t idx : idxs)
@@ -157,14 +151,12 @@ void MySimulator::runComparative() {
 
 
         //keep GM name and result
-        name_and_results.push_back({name, game_result});
+        name_and_results.push_back({name, std::move(game_result)});
     }
 
-
     // --- 4) format results and print them to the output file / screen ---
-
-
-
+    GameResulePrinter printer;
+    printer.printComparativeResults(name_and_results, managersFolder);
 }
 
 
