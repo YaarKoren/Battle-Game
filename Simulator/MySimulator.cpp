@@ -74,7 +74,7 @@ void MySimulator::runComparative() {
 
     //Grab the two entries (we only need them by iterator; no private types leak)
     //it1, it2 are std::vector<AlgorithmAndPlayerFactories>::const_iterator.
-    //it1 is like writing: algoReg.algorithms[idx1] (not exactly, but kind of)
+    //after advancing, "it1" is like writing: algoReg.algorithms[idx1] (not exactly, but kind of)
     const auto& algoReg = AlgorithmRegistrar::getAlgorithmRegistrar();
     auto it1 = algoReg.begin(); std::advance(it1, static_cast<long>(idx1));
     auto it2 = algoReg.begin(); std::advance(it2, static_cast<long>(idx2));
@@ -104,6 +104,7 @@ void MySimulator::runComparative() {
     if (gm_so_paths.empty()) ErrorMsg::error_and_usage("No .so files in Game Managers dir:  " + managersFolder);
     size_t gm_so_paths_num = gm_so_paths.size();
 
+    //load and validate
     std::vector<std::unique_ptr<SharedLib>> GM_libs; // TankAlgo+Player .so handles
                                                     // Keep SO handles alive for the entire match (RAII)
     GM_libs.reserve(gm_so_paths_num);
@@ -162,7 +163,83 @@ void MySimulator::runComparative() {
 
 
 void MySimulator::runCompetitive() {
+    const bool verbose = args_.verbose_();
+    const std::string mapsFolder     = args_.maps_folder_name_;
+    const std::string managerPath    = args_.game_manager_so_name_;
+    const std::string algosFolder    = args_.algos_folder_name_;
 
+    // --- 0) dlopen Game Manager .so file (auto-registration happens here) ---
+    //TODO: maybe improve this (We need only one, no need of vector) and make it a func
+    std::vector<std::unique_ptr<SharedLib>> gm_libs; //Game Manager .so handles
+                                                     // Keep SO handles alive for the entire match (RAII)
+                                                     //create a vector, even thought it's only one so file, cuz this is what out helper func expects to get
+
+    size_t index = 0;
+    //TODO: understand if and why index is needed here? only one gm registered in the registrar
+
+    //load and validate
+    try
+    {
+        index = loadGameManagerAndGetIndex(managerPath, gm_libs);
+    }
+    catch (const std::exception& e)
+    {
+        ErrorMsg::error_and_usage(e.what());
+    }
+
+    //Grab the entry (we only need them by iterator; no private types leak)
+    //it is std::vector<GMFactoryNamePair>::const_iterator.
+    //after advancing, writing "it" is like writing: GMReg.GMFactories[idx] (not exactly, but kind of)
+    const auto& GMReg = GameManagerRegistrar::getGameManagerRegistrar();
+    auto it = GMReg.begin(); std::advance(it, static_cast<long>(index));
+
+    //Create GM instance, using the registered factories
+    std::unique_ptr<AbstractGameManager> GM = it->createGameManager(verbose);
+
+    // --- 2) dlopen all Algorithm .so files from folder (auto-register) ---
+    // TODO make it a func
+
+    //get so files from folder
+    std::vector<std::string> algos_so_paths;
+    algos_so_paths = getSoFilesList(algosFolder);
+    if (algos_so_paths.empty()) ErrorMsg::error_and_usage("No .so files in Algorithms dir:  " + algosFolder);
+    size_t algos_so_paths_num = algos_so_paths.size();
+
+    //load and validate
+    std::vector<std::unique_ptr<SharedLib>> algos_libs; // TankAlgo+Player .so handles
+                                                        // Keep SO handles alive for the entire match (RAII)
+    algos_libs.reserve(algos_so_paths_num);
+
+
+    std::vector<size_t> idxs;
+    for (const auto& so : algos_so_paths) {
+        try
+        {
+            size_t idx = loadAlgoAndPlayerAndGetIndex(so, algos_libs);
+            idxs.push_back(idx);
+        }
+        catch (const std::exception& e)
+        {
+            //TODO: figure what they want us to do with the info that one file failed
+            std::cerr << "Error: " << e.what() << "\n\n";
+        }
+    }
+
+    size_t N = idxs.size(); //number of sucessfully loaded algos, that are going to play
+    if (N == 0) ErrorMsg::error_and_usage("All .so files in Algorithms dir: " + algosFolder + "could not be loaded\n");
+
+    //create a vector of _____ - struct for each file, holding: name + player + algo factory + points, to use later in the loop
+
+
+    //create Player instance
+    //create AlgorithmFactory In stance
+
+    // ---3) for each given map, read map and run the games of N algos on this map, and keep the results
+
+    //maps are in folder - open the file (ENDS WITH .TXT ALWAYS? AND ONLY THOSE?)
+    //count map - K
+
+    // --- 4) format results and print them to the output file / screen ---
 
 }
 
