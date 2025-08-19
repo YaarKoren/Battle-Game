@@ -36,14 +36,24 @@ void MySimulator::runComparative() {
 
     // --- 0) Load the map snapshot and params from map file
     MapParser mapParser;
-    //TODO: add try catch block
-    const auto mapArgs = mapParser.parse(mapPath); //throws error on bad args; catch - should print msg and exit on bad args
-    std::string map_name = mapArgs.map_name_;
-    size_t map_width = mapArgs.map_width_;
-    size_t map_height = mapArgs.map_height_;
-    size_t max_steps = mapArgs.max_steps_;
-    size_t num_shells = mapArgs.num_shells_;
-    UserCommon_207177197_301251571::SatelliteViewImpl map = mapArgs.map_; //it's ok cuz we compile the Simulator with the common + UserCommon code
+    MapParser::MapArgs map_args;
+
+    try
+    {
+        map_args = mapParser.parse(mapPath);
+    }
+    catch (const std::exception& e)
+    {
+        ErrorMsg::error_and_usage("could not parse map: " + *e.what());
+    }
+
+    //throws error on bad args; catch - should print msg and exit on bad args
+    std::string map_name = map_args.map_name_;
+    size_t map_width = map_args.map_width_;
+    size_t map_height = map_args.map_height_;
+    size_t max_steps = map_args.max_steps_;
+    size_t num_shells = map_args.num_shells_;
+    UserCommon_207177197_301251571::SatelliteViewImpl map = map_args.map_; //it's ok cuz we compile the Simulator with the common + UserCommon code
 
 
     // --- 1) dlopen algorithm .so files (auto-registration happens here) ---
@@ -83,9 +93,9 @@ void MySimulator::runComparative() {
     //Create Player instances for each side using the registered factories
     //The constructor signature is fixed by the mandatory interface.
     std::unique_ptr<Player> player1 = it1->createPlayer(/*player_index=*/1,
-        mapArgs.map_width_, mapArgs.map_height_, mapArgs.max_steps_, mapArgs.num_shells_);
+        map_width, map_height, max_steps, num_shells);
     std::unique_ptr<Player> player2 = it2->createPlayer(/*player_index=*/2,
-        mapArgs.map_width_, mapArgs.map_height_, mapArgs.max_steps_, mapArgs.num_shells_);
+        map_width, map_height, max_steps, num_shells);
 
     //Build TankAlgorithmFactory callables that delegate to the registrar entries
     //(We don’t need to fetch the raw factory object; no dlsym needed.)
@@ -148,7 +158,6 @@ void MySimulator::runComparative() {
                 *player1, getCleanFileName(algo1SO), *player1, getCleanFileName(algo2SO),
                 p1_algo_factory, p2_algo_factory);
 
-
         //keep GM name and result
         name_and_results.push_back({name, std::move(game_result)});
     }
@@ -203,6 +212,7 @@ void MySimulator::runCompetitive() {
     std::vector<std::string> algos_so_paths = getSoFilesList(algosFolder);
     if (algos_so_paths.empty()) ErrorMsg::error_and_usage("No .so files in Algorithms dir:  " + algosFolder);
     size_t algos_so_paths_num = algos_so_paths.size();
+    if (algos_so_paths_num < 2) ErrorMsg::error_and_usage("There are less than 2 algorithm .so files in the algorithms folder: " + algosFolder);
 
     //load and validate
     std::vector<std::unique_ptr<SharedLib>> algos_libs; // TankAlgo+Player .so handles
@@ -225,7 +235,9 @@ void MySimulator::runCompetitive() {
     }
 
     size_t N = idxs.size(); //number of successfully loaded algos, that are going to play
-    if (N == 0) ErrorMsg::error_and_usage("All .so files in Algorithms dir: " + algosFolder + "could not be loaded\n");
+    if (N == 0) ErrorMsg::error_and_usage("All .so files in the algorithms folder: " + algosFolder + "could not be loaded");
+    if (N == 1) ErrorMsg::error_and_usage("Only one .so file in the algorithms folder: " + algosFolder + " could be loaded");
+
 
     //create a vector of AlgoAndScore struct
     //each vector entry holds an AlgoAndScore for a different so file loaded successfully
@@ -255,24 +267,103 @@ void MySimulator::runCompetitive() {
             };
     }
 
-    // ---3) for each given map, read map
+    // ---3) for each given map, read map, and keep its MapArgs in a vector
+    MapParser map_parser;
     std::vector<std::string> maps_paths = getFilesList(mapsFolder);
     size_t maps_num = maps_paths.size();
 
-    for (auto path : maps_paths)
+    if (maps_num == 0)
     {
-        //try to read and catch errors
-
-        //keep in a vector
-
+        ErrorMsg::error_and_usage("There are no no maps file in the maps folder: " + mapsFolder);
+        exit(EXIT_FAILURE);
     }
 
-    //keep a vector of k mapArgs
+    std::vector<MapParser::MapArgs> maps_data;
 
 
-    //count map - K
+
+    for (int i = 0; i < maps_num; ++i)
+    {
+        //try to read and catch errors
+        try
+        {
+            maps_data.push_back(map_parser.parse(maps_paths[i]));
+        }
+
+        catch (const std::exception& e)
+        {
+            //TODO: figure what they want us to do with the info that one map reading failed
+            std::cerr << "Error: " << e.what() << "\n\n";
+        }
+    }
+
+    int K = maps_data.size(); //number of maps successfully read
+
+    if (K == 0) // no maps were read successfully
+    {
+        ErrorMsg::error_and_usage("No maps were read successfully from the maps folder: " + mapsFolder);
+        exit(EXIT_FAILURE);
+    }
 
     // --- 4) for each read map, run games of the N algos on this map, and keep the results
+
+    //prepare variable for the nested loop
+    std::string map_name;
+    size_t map_width;
+    size_t map_height;
+    size_t max_steps;
+    size_t num_shells;
+    UserCommon_207177197_301251571::SatelliteViewImpl map;
+    std::unique_ptr<Player> player1;
+    std::unique_ptr<Player> player2;
+    int opp;
+    GameResult game_result;
+    int winner;
+
+    for (int k = 0; k < K; ++k)
+    {
+        //parse map data we got
+        map_name = maps_data[k].map_name_;
+        map_width = maps_data[k].map_width_;
+        map_height = maps_data[k].map_height_;
+        max_steps = maps_data[k].max_steps_;
+        num_shells = maps_data[k].num_shells_;
+        map = maps_data[k].map_;
+
+        for (int l = 0; l < N; l++)
+        {
+            opp = getOpponentIdx(l, k, N);
+
+            //create Player for the l-th algo and for its opponent
+            player1 = algos_and_scores[l].player_factory(/*player_index=*/1,
+            map_width, map_height, max_steps, num_shells);
+
+            player2 = algos_and_scores[opp].player_factory(/*player_index=*/2,
+            map_width, map_height, max_steps, num_shells);
+
+            //run the game with the 2 creates players and their corresponding tank algorithms
+            game_result = GM->run(
+                map_width, map_height, map, map_name,
+                max_steps, num_shells,
+                *player1, algos_and_scores[l].name, *player1, algos_and_scores[opp].name,
+                algos_and_scores[l].algo_factory, algos_and_scores[opp].algo_factory);
+
+            //check the result and score accordingly
+            if (game_result.winner == 0)
+            {
+                algos_and_scores[l].score += 1;
+                algos_and_scores[opp].score += 1;
+            }
+            else if (game_result.winner == 1)
+            {
+                algos_and_scores[l].score += 3;
+            }
+            else if (game_result.winner == 2)
+            {
+                algos_and_scores[opp].score += 3;
+            }
+        }
+    }
 
     // --- 5) format results and print them to the output file / screen ---
 
@@ -406,6 +497,7 @@ std::vector<std::string> getSoFilesList(const std::string& dir_path) {
    return file_paths;
 }
 
+//------------------------------competition mode - helper function-----------------
 //iterate through the folder and returns a list paths of files
 //TODO: maybe check if the files ends with ".txt"?
 //TODO: unite with prev func to avoid duplicates
@@ -419,7 +511,11 @@ std::vector<std::string> MySimulator::getFilesList(const std::string& dir_path) 
     return file_paths;
 }
 
-
+int MySimulator::getOpponentIdx(int l, int k, int N)
+{
+    //TODO
+    return 1;
+}
 
 
 

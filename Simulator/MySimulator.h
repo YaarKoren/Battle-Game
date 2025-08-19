@@ -52,7 +52,13 @@ private:
     static size_t loadGameManagerAndGetIndex(const std::string& so_path,
         std::vector<std::unique_ptr<SharedLib>>& open_libs);
     static std::vector<std::string> getSoFilesList(const std::string& dir_path);
+
+
+    //competition mode - helper functions
     static std::vector<std::string> getFilesList(const std::string& dir_path);
+    static int MySimulator::getOpponentIdx(int i, int k, int N);
+
+
 
 
 };
