@@ -36,13 +36,14 @@ void MySimulator::runComparative() {
 
     // --- 0) Load the map snapshot and params from map file
     MapParser mapParser;
-    const auto mapArgs = mapParser.parse(mapPath); //prints msg and exits on bad args
+    //TODO: add try catch block
+    const auto mapArgs = mapParser.parse(mapPath); //throws error on bad args; catch - should print msg and exit on bad args
     std::string map_name = mapArgs.map_name_;
     size_t map_width = mapArgs.map_width_;
     size_t map_height = mapArgs.map_height_;
     size_t max_steps = mapArgs.max_steps_;
     size_t num_shells = mapArgs.num_shells_;
-    UserCommon_207177197_301251571::SatelliteViewImpl map = mapArgs.map_;
+    UserCommon_207177197_301251571::SatelliteViewImpl map = mapArgs.map_; //it's ok cuz we compile the Simulator with the common + UserCommon code
 
 
     // --- 1) dlopen algorithm .so files (auto-registration happens here) ---
@@ -99,8 +100,7 @@ void MySimulator::runComparative() {
     // TODO make it a func
 
     //get so files from folder
-    std::vector<std::string> gm_so_paths;
-    gm_so_paths = getSoFilesList(managersFolder);
+    std::vector<std::string> gm_so_paths = getSoFilesList(managersFolder);
     if (gm_so_paths.empty()) ErrorMsg::error_and_usage("No .so files in Game Managers dir:  " + managersFolder);
     size_t gm_so_paths_num = gm_so_paths.size();
 
@@ -200,8 +200,7 @@ void MySimulator::runCompetitive() {
     // TODO make it a func
 
     //get so files from folder
-    std::vector<std::string> algos_so_paths;
-    algos_so_paths = getSoFilesList(algosFolder);
+    std::vector<std::string> algos_so_paths = getSoFilesList(algosFolder);
     if (algos_so_paths.empty()) ErrorMsg::error_and_usage("No .so files in Algorithms dir:  " + algosFolder);
     size_t algos_so_paths_num = algos_so_paths.size();
 
@@ -225,21 +224,57 @@ void MySimulator::runCompetitive() {
         }
     }
 
-    size_t N = idxs.size(); //number of sucessfully loaded algos, that are going to play
+    size_t N = idxs.size(); //number of successfully loaded algos, that are going to play
     if (N == 0) ErrorMsg::error_and_usage("All .so files in Algorithms dir: " + algosFolder + "could not be loaded\n");
 
-    //create a vector of _____ - struct for each file, holding: name + player + algo factory + points, to use later in the loop
+    //create a vector of AlgoAndScore struct
+    //each vector entry holds an AlgoAndScore for a different so file loaded successfully
+    //struct holds: name + player factory + tank algorithm factory + points
+    std::vector<AlgoAndScore> algos_and_scores;
+    algos_and_scores.reserve(N);
+    const auto& algoReg = AlgorithmRegistrar::getAlgorithmRegistrar();
+    for (int i = 0; i < N; ++i)
+    {
+        auto iter = algoReg.begin(); std::advance(iter, static_cast<long>(idxs[i]));
+
+        //get algo name and keep it
+        algos_and_scores[i].name = getCleanFileName(iter->name());
+
+        //create and keep Player Factory
+        algos_and_scores[i].player_factory =
+            [iter](int player_index, size_t x, size_t y, size_t max_steps, size_t num_shells)
+            {
+                return iter->createPlayer(player_index, x, y, max_steps, num_shells);
+            };
+
+        //create and keep Algorithm Factory
+        algos_and_scores[i].algo_factory =
+            [iter](int player_index, int tank_index)
+            {
+                return iter->createTankAlgorithm(player_index, tank_index);
+            };
+    }
+
+    // ---3) for each given map, read map
+    std::vector<std::string> maps_paths = getFilesList(mapsFolder);
+    size_t maps_num = maps_paths.size();
+
+    for (auto path : maps_paths)
+    {
+        //try to read and catch errors
+
+        //keep in a vector
+
+    }
+
+    //keep a vector of k mapArgs
 
 
-    //create Player instance
-    //create AlgorithmFactory In stance
-
-    // ---3) for each given map, read map and run the games of N algos on this map, and keep the results
-
-    //maps are in folder - open the file (ENDS WITH .TXT ALWAYS? AND ONLY THOSE?)
     //count map - K
 
-    // --- 4) format results and print them to the output file / screen ---
+    // --- 4) for each read map, run games of the N algos on this map, and keep the results
+
+    // --- 5) format results and print them to the output file / screen ---
 
 }
 
@@ -371,35 +406,20 @@ std::vector<std::string> getSoFilesList(const std::string& dir_path) {
    return file_paths;
 }
 
-//Return indices of the registrar entries that corresponds to this load
-//prints error msg and exits if there are no .so files in the dir
-std::vector<size_t> MySimulator::loadTankAlgosAndPlayersFromDir(const std::string& dir,
-    std::vector<std::unique_ptr<SharedLib>>& open_libs) // keep handles alive
-    {
-    auto files = getSoFilesList(dir);
-    if (files.empty()) ErrorMsg::error_and_usage("No .so files in Algorithm dir:  " + dir);
-    std::vector<size_t> idxs;
-    for (const auto& so : files) {
-        //TODO: add here try and catch or delete func if not used
-        size_t idx = loadAlgoAndPlayerAndGetIndex(so, open_libs);   ////throws error if fails
-        idxs.push_back(idx);    // remember indices
+//iterate through the folder and returns a list paths of files
+//TODO: maybe check if the files ends with ".txt"?
+//TODO: unite with prev func to avoid duplicates
+std::vector<std::string> MySimulator::getFilesList(const std::string& dir_path) {
+    std::vector<std::string> file_paths;
+    for (const auto& e : fs::directory_iterator(fs::absolute(dir_path))) {
+            file_paths.push_back(fs::absolute(e.path()).string());
     }
-    return idxs;
+    std::sort(file_paths.begin(), file_paths.end());
+    file_paths.erase(std::unique(file_paths.begin(), file_paths.end()), file_paths.end());
+    return file_paths;
 }
 
-//Return indices of the registrar entries that corresponds to this load
-//prints error msg and exits if there are no .so files in the dir
-std::vector<size_t> MySimulator::loadGMFromDir(const std::string& dir,
-    std::vector<std::unique_ptr<SharedLib>>& open_libs) // keep handles alive
-    {
-    auto files = getSoFilesList(dir);
-    if (files.empty()) ErrorMsg::error_and_usage("No .so files in Game Managers dir:  " + dir);
-    std::vector<size_t> idxs;
-    for (const auto& so : files) {
-        //TODO: add here try and catch or delete func if not used
-        size_t idx = loadGameManagerAndGetIndex(so, open_libs);   //throws error if fails
 
-        idxs.push_back(idx);    // remember indices
-    }
-    return idxs;
-    }
+
+
+

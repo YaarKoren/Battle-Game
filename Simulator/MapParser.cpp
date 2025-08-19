@@ -13,14 +13,12 @@ namespace fs = std::filesystem;
 MapParser::MapArgs MapParser::parse(const std::string& filename)
 {
     if (!fs::exists(filename)) {
-        ErrorMsg::error_and_usage("Map file not found: " + filename);
-        exit(EXIT_FAILURE);
+      throw std::runtime_error("Map file not found: " + filename);
     }
 
     std::ifstream file(filename);
     if (!file.is_open()) {
-        ErrorMsg::error_and_usage("Map file found but cannot be opened: " + filename);
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Map file found but cannot be opened: " + filename);
     }
 
     MapArgs args;
@@ -31,12 +29,27 @@ MapParser::MapArgs MapParser::parse(const std::string& filename)
         if (!line.empty()) lines.push_back(line);
     }
 
-    std::tie(args.map_name_,
+    try
+    {
+        std::tie(args.map_name_,
          args.map_width_,
          args.map_height_,
          args.max_steps_,
          args.num_shells_) = MapParser::parseMetadata(lines);
-    args.map_ = MapParser::parseMap(lines, args.map_height_, args.map_width_);
+    }
+    catch (const std::exception& e)
+    {
+        throw std::runtime_error(e.what());
+    }
+
+    try
+    {
+        args.map_ = MapParser::parseMap(lines, args.map_height_, args.map_width_);
+    }
+    catch (const std::exception& e)
+    {
+    throw std::runtime_error(e.what());
+    }
 
     return args;
 }
@@ -45,8 +58,7 @@ MapParser::MapArgs MapParser::parse(const std::string& filename)
 std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata (std::vector<std::string> lines)
 {
     if (lines.size() < 5) {
-        ErrorMsg::error_and_usage("Map file missing metadata lines");
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Map file missing metadata lines");
     }
 
     std::string map_name = lines[0];
@@ -62,8 +74,7 @@ std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata
 
         size_t eqPos = line.find('=');
         if (eqPos == std::string::npos) {
-            ErrorMsg::error_and_usage("Malformed metadata line in map file");
-            exit(EXIT_FAILURE);
+            throw std::runtime_error("Malformed metadata line in map file");
         }
 
         std::string key = line.substr(0, eqPos);
