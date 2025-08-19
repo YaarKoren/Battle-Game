@@ -36,7 +36,7 @@ public:
     explicit MySimulator(CmdArgsParser::CmdArgs args);
     ~MySimulator() = default;
 
-    int run();                     // decides comparative vs competitive
+    void run();                     // decides comparative vs competitive
 
 
 private:
@@ -44,7 +44,7 @@ private:
     void runCompetitive();          // non-static, uses args_
     CmdArgsParser::CmdArgs args_;
 
-    //helper functions to load algos ang GMs factories from so files
+    //so files loading - helper functions
     static std::string getCleanFileName(const std::string& path);
     static size_t loadAlgoAndPlayerAndGetIndex(const std::string& so_path,
         std::vector<std::unique_ptr<SharedLib>>& open_libs);
