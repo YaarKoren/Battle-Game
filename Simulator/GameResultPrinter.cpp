@@ -8,9 +8,9 @@ void GameResultPrinter::printComparativeResults(
     std::vector<GMNameAndResult> results,
     std::string folder_path,
     size_t map_width, size_t map_height,
-    std::string& game_map_filename,
-    std::string& algo1_so_filename,
-    std::string& algo2_so_filename,
+    std::string game_map_filename,
+    std::string algo1_so_filename,
+    std::string algo2_so_filename,
     size_t max_steps) {
 
     //---1) Build (key,item*) rows
@@ -61,13 +61,16 @@ void GameResultPrinter::printComparativeResults(
     }
     std::ostream& os = to_screen ? std::cout : out;
 
-    //---6) Header
+    //---6) Header (lines 1–4)
     os << "game_map=" << game_map_filename << "\n";
     os << "algorithm1=" << algo1_so_filename << "\n";
     os << "algorithm2=" << algo1_so_filename << "\n\n";
 
-    //---7)
-    auto emit_group = [&](const Group& g){
+    //---7) Groups info
+    auto emit_group = [&](const Group& g){ //a local lambda function
+      									   //[&] → capture everything by reference (so the lambda can use os,
+											//max_steps, etc., from the outer scope).
+
         // 5th line: comma-separated biggest list of GM names (or for subsequent groups the list as well)
         for (size_t i=0;i<g.members.size();++i) {
             if (i) os << ",";
@@ -86,17 +89,16 @@ void GameResultPrinter::printComparativeResults(
     };
 
     if (!groups.empty()) {
-        emit_group(groups.front());
+        emit_group(groups.front()); //.front() returns a reference to the first element in the vector
         for (size_t i=1;i<groups.size();++i) {
             os << "\n"; // empty line between groups
             emit_group(groups[i]);
         }
     }
-
 }
 
 
-//----------------Comparative run helper functions-----------------
+//---------------------Comparative mode - helper functions-----------------------
 
 GameResultPrinter::ResultKey GameResultPrinter::makeKey(const GameResult& r, size_t map_width, size_t map_height) {
     return {
@@ -128,19 +130,35 @@ std::string GameResultPrinter::blankSnapshot(size_t map_width, size_t map_height
     return s;
 }
 
-//TODO: CHECK THIS
-std::string GameResultPrinter::makeUniquePath(std::string folder_path)  {
+std::string GameResultPrinter::makeUniquePath(std::string folder_path) {
     using namespace std::chrono;
-    auto now = system_clock::now();
-    duration<double> ts = now.time_since_epoch();
-    constexpr size_t NUM_DIGITS = 9;
-    size_t NUM_DIGITS_P = std::pow(10, NUM_DIGITS);
-    std::ostringstream num;
-    num << std::setw(NUM_DIGITS) << std::setfill('0') << size_t(ts.count() * NUM_DIGITS_P) % NUM_DIGITS_P;
-    std::string path = folder_path + "/comparative_results_" + num.str() + ".t    xt";
-    return path;
-}
+    namespace fs = std::filesystem;
 
+    constexpr std::size_t NUM_DIGITS   = 9;                  // width to print
+    constexpr std::uint64_t NUM_DIGITS_P = 1'000'000'000ULL; // 10^9
+
+    // Try a few variants (time + i) to dodge a same-tick collision.
+    for (int i = 0; i < 100; ++i) {
+        // microsecond resolution is plenty; cast for a stable integer
+        auto now_us = time_point_cast<microseconds>(system_clock::now());
+        std::uint64_t ticks = static_cast<std::uint64_t>(now_us.time_since_epoch().count());
+
+        // Bounded, fixed-width numeric token (padded with leading zeros)
+        std::uint64_t token = (ticks + static_cast<std::uint64_t>(i)) % NUM_DIGITS_P;
+
+        std::ostringstream num;
+        num << std::setw(NUM_DIGITS) << std::setfill('0') << token;
+
+        std::string path = folder_path + "/comparative_results_" + num.str() + ".txt";
+
+        // If it doesn't exist, we're good.
+        if (!fs::exists(path)) return path;
+    }
+
+    // Fallback: unbounded tick value (unique enough even if files exist)
+    auto now_us = time_point_cast<microseconds>(system_clock::now());
+    return folder_path + "/comparative_results_" + std::to_string(now_us.time_since_epoch().count()) + ".txt";
+}
 
 std::string GameResultPrinter::reasonToString(GameResult::Reason r) {
     switch (r) {
@@ -175,11 +193,6 @@ std::string GameResultPrinter::resultMessage(const GameResult& r, size_t max_ste
     else if (r.winner == 2) {
       oss << "Player " << 2 << " won with " << p2_num_of_tanks << " still alive";
     }
-
-
-
-
-
     return oss.str();
 }
 
@@ -188,3 +201,5 @@ size_t GameResultPrinter::getNumberOfTanks(const GameResult& r, int player) {
     return r.remaining_tanks[player];
 }
 
+
+//-----------------------Competition Mode - helper functions------------------------

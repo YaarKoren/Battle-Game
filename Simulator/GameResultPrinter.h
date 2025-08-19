@@ -13,6 +13,7 @@
 #include <chrono>
 #include <cmath>
 #include <iomanip>   // <-- for setw, setfill
+#include <filesystem>
 
 #include "../common/SatelliteView.h"
 #include "Utils.h"
@@ -28,16 +29,16 @@ class GameResultPrinter {
     static void printComparativeResults(std::vector<GMNameAndResult> results,
                                         std::string folder_path,
                                         size_t map_width, size_t map_height,
-                                        std::string& game_map_filename,
-                                        std::string& algo1_so_filename,
-                                        std::string& algo2_so_filename,
+                                        std::string game_map_filename,
+                                        std::string algo1_so_filename,
+                                        std::string algo2_so_filename,
                                         size_t max_steps);
 
     static void printCompetitionResults();
 
   private:
 
-    //Comparative mode - helper functions and structs
+    //---------------------Comparative mode - helper functions and structs---------------------
     struct ResultKey {
         int winner;
         GameResult::Reason reason;
@@ -78,7 +79,7 @@ class GameResultPrinter {
 
 
 
-    //Competition Mode - helper functions
+    //-----------------------Competition Mode - helper functions------------------------
 
 
 

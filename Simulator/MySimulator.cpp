@@ -11,28 +11,20 @@ namespace fs = std::filesystem;
 MySimulator::MySimulator(CmdArgsParser::CmdArgs args)
     : args_(std::move(args)) {}
 
-int main(int argc, char* argv[]) {
+void main(int argc, char* argv[]) {
   std::cout << "1..2.. test\n";
   auto args = CmdArgsParser::parse(argc, argv); //prints msg and exits on bad args
-
-  //Simulator sim(std::move(args));
-  //int rc = sim.run();
-
-  //std::cout << "1..2.. test\n";
-  //return (rc == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
-  return 0;
+  MySimulator sim(std::move(args));
+  sim.run();
 }
 
-int MySimulator::run() {
+void MySimulator::run() {
   if (args_.mode_ == Mode::Comparative) {
     MySimulator::runComparative();
   }
-
   if (args_.mode_ == Mode::Competitive) {
     MySimulator::runCompetitive();
   }
-
-  return 0;
 }
 
 void MySimulator::runComparative() {
@@ -161,7 +153,10 @@ void MySimulator::runComparative() {
     }
 
     // --- 4) format results and print them to the output file / screen ---
-    GameResulePrinter::printComparativeResults(name_and_results, managersFolder,map_width, map_height, max_steps);
+    GameResultPrinter::printComparativeResults(name_and_results, managersFolder,
+                                                map_width, map_height,
+                                                mapPath, algo1SO, algo2SO,
+                                                max_steps);
 }
 
 
@@ -174,7 +169,7 @@ void MySimulator::runCompetitive() {
 
 
 
-//helper functions//
+//----------------------------------so files loading - helper functions-------------------------------//
 
 //strip the path and ".so" suffix
 std::string MySimulator::getCleanFileName(const std::string& path) {
