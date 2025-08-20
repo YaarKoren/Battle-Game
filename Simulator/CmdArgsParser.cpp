@@ -56,11 +56,13 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
   else { //competition
       args.mode_ = Mode::Competitive;
 
-      //parse args for Competitive mode
-      //TODO: ADD TRY CATCH
-      args.maps_folder_name_ = getAndValidateFileName(argc, argv, "game_maps_folder");
-      args.game_manager_so_name_ = getAndValidateFileName(argc, argv, "game_manager_so_filename");
-      args.algos_folder_name_ = getAndValidateFileName(argc, argv, "algorithms_folder");
+      //parse args for Competitive mode, , and collect missing args if there are
+      try {args.maps_folder_name_ = getAndValidateFileName(argc, argv, "game_maps_folder");}
+      catch (const std::exception& e) {missing_args.emplace_back(e.what()); }
+      try {args.game_manager_so_name_ = getAndValidateFileName(argc, argv, "game_manager_so_filename");}
+      catch (const std::exception& e) {missing_args.emplace_back(e.what()); }
+      try {args.algos_folder_name_ = getAndValidateFileName(argc, argv, "algorithms_folder");}
+      catch (const std::exception& e) {missing_args.emplace_back(e.what()); }
 
       //build allow-lists for this mode
       const std::vector<std::string> exactFlags = {
@@ -100,14 +102,14 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
     }
   }
   //getFlagValue throws an error if the flag's value is missing
-  catch (const std::exception& e) {
-   missing_args.emplace_back(e.what());
-  }
+  catch (const std::exception& e) {missing_args.emplace_back(e.what());}
 
-    if (!missing_args.empty())
-    {
-        ErrorMsg::error_and_usage("Missing arguments: " + joinArgs(missing_args));
-    }
+
+  if (!missing_args.empty())
+  {
+      ErrorMsg::error_and_usage("Missing arguments: " + joinArgs(missing_args));
+      exit(EXIT_FAILURE);
+  }
   return args;
 }
 
