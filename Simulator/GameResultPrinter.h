@@ -15,6 +15,7 @@
 #include <iomanip>   // <-- for setw, setfill
 #include <filesystem>
 
+
 #include "../common/SatelliteView.h"
 #include "Utils.h"
 
@@ -25,6 +26,10 @@ class GameResultPrinter {
     GameResultPrinter() = default;
 
     virtual ~GameResultPrinter() = default;
+    void printCompetitionResults(const std::vector<AlgoAndScoreSmall>& algos_and_scores,
+                                    const std::string& maps_folder_path,
+                                    const std::string& game_manager_clean_name,
+                                    const std::string& algos_folder_path);
 
     static void printComparativeResults(std::vector<GMNameAndResult> results,
                                         std::string folder_path,
@@ -38,7 +43,10 @@ class GameResultPrinter {
 
   private:
 
-    //---------------------Comparative mode - helper functions and structs---------------------
+    //time helper function
+    static std::string makeUniquePath(std::string folder_path, std::string mode_name);
+
+    //Comparative mode - helper functions and structs
     struct ResultKey {
         int winner;
         GameResult::Reason reason;
@@ -72,14 +80,13 @@ class GameResultPrinter {
     static std::string renderView(const SatelliteView& sv,
                                   size_t map_width, size_t map_height);
     static std::string blankSnapshot(size_t map_width, size_t map_height);
-    static std::string makeUniquePath(std::string folder_path);
     static std::string reasonToString(GameResult::Reason r);
     static std::string resultMessage(const GameResult& r, size_t max_steps);
     static size_t getNumberOfTanks(const GameResult& r, int player);
 
 
 
-    //-----------------------Competition Mode - helper functions------------------------
+    //Competition Mode - helper functions
 
 
 

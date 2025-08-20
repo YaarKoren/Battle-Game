@@ -3,6 +3,9 @@
 #include "GameResultPrinter.h"
 
 #define MAX_STEPS_AFTER_SHELLS_END 40
+#define COMPARATIVE_STR_FOR_UNQ_PATH "comparative_results"
+#define COMPETITION_STR_FOR_UNQ_PATH "competition"
+
 
 void GameResultPrinter::printComparativeResults(
     std::vector<GMNameAndResult> results,
@@ -51,7 +54,7 @@ void GameResultPrinter::printComparativeResults(
     });
 
     //---5) Try to open file, else fallback to screen with error
-    std::string path = makeUniquePath(folder_path);
+    std::string path = makeUniquePath(folder_path, COMPARATIVE_STR_FOR_UNQ_PATH);
     std::ofstream out(path);
     bool to_screen = false;
     if (!out) {
@@ -64,7 +67,8 @@ void GameResultPrinter::printComparativeResults(
     //---6) Header (lines 1–4)
     os << "game_map=" << game_map_filename << "\n";
     os << "algorithm1=" << algo1_so_filename << "\n";
-    os << "algorithm2=" << algo1_so_filename << "\n\n";
+    os << "algorithm2=" << algo1_so_filename << "\n";
+    os << "\n";
 
     //---7) Groups info
     auto emit_group = [&](const Group& g){ //a local lambda function
@@ -96,6 +100,88 @@ void GameResultPrinter::printComparativeResults(
         }
     }
 }
+
+void GameResultPrinter::printCompetitionResults(const std::vector<AlgoAndScoreSmall>& algos_and_scores,
+                                  const std:: string& maps_folder_path,
+                                  const std::string& game_manager_clean_name,
+                                  const std::string& algos_folder_path) {
+
+    // 1) Build the full output into a string buffer
+    std::ostringstream oss;
+
+    // Lines 1–3
+    oss << "game_maps_folder=" << maps_folder_path << "\n";
+    oss << "game_manager="     << game_manager_clean_name << "\n";
+    oss << "\n";
+
+    // Copy then sort by total score (desc). Tie-breaker by name (asc) for determinism.
+    //specs: “Algorithms with the same score can appear in any order.”
+    //added a name tie‑break so output is deterministic
+    std::vector<AlgoAndScoreSmall> rows = algos_and_scores;
+    std::stable_sort(rows.begin(), rows.end(),
+        [](const AlgoAndScoreSmall a, const AlgoAndScoreSmall& b){
+            if (a.score != b.score) return a.score > b.score;   // higher first
+            return a.name < b.name;                              // tie-break
+        });
+
+    // Lines 4+ : "<algorithm name> <total score>"
+    for (const auto& r : rows) {
+        oss << r.name << ' ' << r.score << "\n";
+    }
+
+    const std::string content = oss.str();
+
+    // 2) Decide destination: file under *algorithms folder* or screen on failure.
+    const std::string out_path = makeUniquePath(algos_folder_path, COMPETITION_STR_FOR_UNQ_PATH);
+
+    std::ofstream out(out_path);
+    if (!out) {
+        std::cerr << "ERROR: cannot create output file: " << out_path
+                  << " — printing results to screen instead.\n";
+        std::cout << content;
+        return;
+    }
+
+    out << content;
+
+}
+
+
+
+
+// time helper function
+std::string GameResultPrinter::makeUniquePath(std::string folder_path, std::string mode_name) {
+    using namespace std::chrono;
+    namespace fs = std::filesystem;
+
+    constexpr std::size_t NUM_DIGITS   = 9;                  // width to print
+    constexpr std::uint64_t NUM_DIGITS_P = 1'000'000'000ULL; // 10^9
+
+    // Try a few variants (time + i) to dodge a same-tick collision.
+    for (int i = 0; i < 100; ++i) {
+        // microsecond resolution is plenty; cast for a stable integer
+        auto now_us = time_point_cast<microseconds>(system_clock::now());
+        std::uint64_t ticks = static_cast<std::uint64_t>(now_us.time_since_epoch().count());
+
+        // Bounded, fixed-width numeric token (padded with leading zeros)
+        std::uint64_t token = (ticks + static_cast<std::uint64_t>(i)) % NUM_DIGITS_P;
+
+        std::ostringstream num;
+        num << std::setw(NUM_DIGITS) << std::setfill('0') << token;
+
+        std::string path = folder_path + "/" + mode_name + "_" + num.str() + ".txt";
+
+        // If it doesn't exist, we're good.
+        if (!fs::exists(path)) return path;
+    }
+
+    // Fallback: unbounded tick value (unique enough even if files exist)
+    auto now_us = time_point_cast<microseconds>(system_clock::now());
+    return folder_path + "/" + mode_name + "_" + std::to_string(now_us.time_since_epoch().count()) + ".txt";
+}
+
+
+
 
 
 //---------------------Comparative mode - helper functions-----------------------
@@ -130,35 +216,6 @@ std::string GameResultPrinter::blankSnapshot(size_t map_width, size_t map_height
     return s;
 }
 
-std::string GameResultPrinter::makeUniquePath(std::string folder_path) {
-    using namespace std::chrono;
-    namespace fs = std::filesystem;
-
-    constexpr std::size_t NUM_DIGITS   = 9;                  // width to print
-    constexpr std::uint64_t NUM_DIGITS_P = 1'000'000'000ULL; // 10^9
-
-    // Try a few variants (time + i) to dodge a same-tick collision.
-    for (int i = 0; i < 100; ++i) {
-        // microsecond resolution is plenty; cast for a stable integer
-        auto now_us = time_point_cast<microseconds>(system_clock::now());
-        std::uint64_t ticks = static_cast<std::uint64_t>(now_us.time_since_epoch().count());
-
-        // Bounded, fixed-width numeric token (padded with leading zeros)
-        std::uint64_t token = (ticks + static_cast<std::uint64_t>(i)) % NUM_DIGITS_P;
-
-        std::ostringstream num;
-        num << std::setw(NUM_DIGITS) << std::setfill('0') << token;
-
-        std::string path = folder_path + "/comparative_results_" + num.str() + ".txt";
-
-        // If it doesn't exist, we're good.
-        if (!fs::exists(path)) return path;
-    }
-
-    // Fallback: unbounded tick value (unique enough even if files exist)
-    auto now_us = time_point_cast<microseconds>(system_clock::now());
-    return folder_path + "/comparative_results_" + std::to_string(now_us.time_since_epoch().count()) + ".txt";
-}
 
 std::string GameResultPrinter::reasonToString(GameResult::Reason r) {
     switch (r) {

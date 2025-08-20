@@ -15,3 +15,8 @@ struct AlgoAndScore
     TankAlgorithmFactory algo_factory;
     int score;
 };
+
+struct AlgoAndScoreSmall {
+    std::string name;
+    int score;
+};

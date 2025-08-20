@@ -234,7 +234,7 @@ void MySimulator::runCompetitive() {
         }
     }
 
-    size_t N = idxs.size(); //number of successfully loaded algos, that are going to play
+    int N = idxs.size(); //number of successfully loaded algos, that are going to play
     if (N == 0) ErrorMsg::error_and_usage("All .so files in the algorithms folder: " + algosFolder + "could not be loaded");
     if (N == 1) ErrorMsg::error_and_usage("Only one .so file in the algorithms folder: " + algosFolder + " could be loaded");
 
@@ -314,11 +314,10 @@ void MySimulator::runCompetitive() {
     size_t max_steps;
     size_t num_shells;
     UserCommon_207177197_301251571::SatelliteViewImpl map;
-    std::unique_ptr<Player> player1;
-    std::unique_ptr<Player> player2;
     int opp;
-    GameResult game_result;
+
     int winner;
+    bool isOnlyHalfGames;
 
     for (int k = 0; k < K; ++k)
     {
@@ -330,43 +329,44 @@ void MySimulator::runCompetitive() {
         num_shells = maps_data[k].num_shells_;
         map = maps_data[k].map_;
 
-        for (int l = 0; l < N; l++)
-        {
-            opp = getOpponentIdx(l, k, N);
+        isOnlyHalfGames = (N % 2 == 0) && (k == N/2 - 1); //  offset == N/2
+                                                          //specs :Note that in the case of k = N/2 - 1 (if N is even),
+                                                          //the pairing for each algorithm in both games would be exactly the same.
+                                                          //You are supposed to run only one game for each pair in this case
 
-            //create Player for the l-th algo and for its opponent
-            player1 = algos_and_scores[l].player_factory(/*player_index=*/1,
-            map_width, map_height, max_steps, num_shells);
+       if (isOnlyHalfGames)
+       {
+           for (int l = 0; l < N/2; ++l )
+           {
+               opp = getOpponentIdx(l, k, N);
+               runGameAndKeepScore(l, opp, algos_and_scores, map_width, map_height,
+                   max_steps, num_shells, map_name,
+                   map, GM);
+           }
+       }
+       else
+       {
+           for (int l = 0; l < N; ++l )
+           {
+               opp = getOpponentIdx(l, k, N);
+               runGameAndKeepScore(l, opp, algos_and_scores, map_width, map_height,
+                    max_steps, num_shells, map_name,
+                    map, GM);
+           }
+       }
 
-            player2 = algos_and_scores[opp].player_factory(/*player_index=*/2,
-            map_width, map_height, max_steps, num_shells);
-
-            //run the game with the 2 creates players and their corresponding tank algorithms
-            game_result = GM->run(
-                map_width, map_height, map, map_name,
-                max_steps, num_shells,
-                *player1, algos_and_scores[l].name, *player1, algos_and_scores[opp].name,
-                algos_and_scores[l].algo_factory, algos_and_scores[opp].algo_factory);
-
-            //check the result and score accordingly
-            if (game_result.winner == 0)
-            {
-                algos_and_scores[l].score += 1;
-                algos_and_scores[opp].score += 1;
-            }
-            else if (game_result.winner == 1)
-            {
-                algos_and_scores[l].score += 3;
-            }
-            else if (game_result.winner == 2)
-            {
-                algos_and_scores[opp].score += 3;
-            }
-        }
     }
 
     // --- 5) format results and print them to the output file / screen ---
-
+    //make parameters for the printing function
+    std::string game_manager_name = getCleanFileName(managerPath);
+    //make a vector of algos and scores (no factories) to pass to the printing function
+    std::vector<AlgoAndScoreSmall> scores;
+    scores.reserve(algos_and_scores.size());
+    for (const auto& a : algos_and_scores) {
+        scores.push_back({a.name, a.score});
+    }
+    GameResultPrinter::printCompetitionResults(scores, mapsFolder, game_manager_name, algosFolder);
 }
 
 
@@ -511,11 +511,63 @@ std::vector<std::string> MySimulator::getFilesList(const std::string& dir_path) 
     return file_paths;
 }
 
+//assuming N >=2, l >= 0, k > 0
 int MySimulator::getOpponentIdx(int l, int k, int N)
 {
-    //TODO
-    return 1;
+    // offset = 1 + (k % (N-1))
+    const size_t offset = 1 + (k % (N - 1));
+
+    // opponent index per spec: (l + offset) % N
+    const size_t opp = (static_cast<size_t>(l) + offset) % N;
+
+    return static_cast<int>(opp);
 }
+
+
+
+
+
+
+void runGameAndKeepScore(const int l, const int opp, std::vector<AlgoAndScore> algos_and_scores,
+    const size_t map_width, const size_t map_height, const size_t max_steps, const size_t num_shells,
+    const std::string& map_name,
+    const UserCommon_207177197_301251571::SatelliteViewImpl& map,
+    const std::unique_ptr<AbstractGameManager>& GM
+    )
+{
+    //create Player for the l-th algo and for its opponent
+    std::unique_ptr<Player> player1 = algos_and_scores[l].player_factory(/*player_index=*/1,
+    map_width, map_height, max_steps, num_shells);
+
+    std::unique_ptr<Player> player2 = algos_and_scores[opp].player_factory(/*player_index=*/2,
+    map_width, map_height, max_steps, num_shells);
+
+    //run the game with the 2 creates players and their corresponding tank algorithms
+    const GameResult game_result = GM->run(
+        map_width, map_height, map, map_name,
+        max_steps, num_shells,
+        *player1, algos_and_scores[l].name, *player1, algos_and_scores[opp].name,
+        algos_and_scores[l].algo_factory, algos_and_scores[opp].algo_factory);
+
+    //check the result and score accordingly
+    if (game_result.winner == 0)
+    {
+        algos_and_scores[l].score += 1;
+        algos_and_scores[opp].score += 1;
+    }
+    else if (game_result.winner == 1)
+    {
+        algos_and_scores[l].score += 3;
+    }
+    else if (game_result.winner == 2)
+    {
+        algos_and_scores[opp].score += 3;
+    }
+
+
+}
+
+
 
 
 
