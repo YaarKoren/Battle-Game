@@ -41,16 +41,18 @@ public:
 
 private:
     //helper functions//
-    bool hasFlag(int argc, char* argv[], const std::string& flag);
-    std::optional<std::string> getFlagValue(int argc, char* argv[], const std::string& flag);
-    std::string getAndValidateFileName(int argc, char* argv[], std::string fileName);
+    static bool hasFlag(int argc, char* argv[], const std::string& flag);
+    static std::optional<std::string> getFlagValue(int argc, char* argv[], const std::string& flag);
+    static std::string getAndValidateFileName(int argc, char* argv[], std::string fileName);
+    static std::string joinArgs(const std::vector<std::string>& args, const std::string& sep = ", ");
 
     //helper functions to print list of unsupported args
     static inline bool starts_with(const std::string& s, const std::string& prefix);
-    std::vector<std::string> collectUnsupportedArgs(int argc, char* argv[],
+    static std::vector<std::string> collectUnsupportedArgs(int argc, char* argv[],
         const std::vector<std::string>& exactFlags,
         const std::vector<std::string>& kvPrefixes);
-    static std::string joinArgs(const std::vector<std::string>& args, const std::string& sep = ", ");
+
+
 
 
 

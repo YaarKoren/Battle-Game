@@ -17,14 +17,20 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
       exit(EXIT_FAILURE);
   }
 
+    std::vector<std::string> missing_args;
+
   if (hasComparative) {
       args.mode_ = Mode::Comparative;
 
-      //parse args for Comparative mode
-      args.map_filename_ = getAndValidateFileName(argc, argv, "game_map");
-      args.game_managers_folder_name_ = getAndValidateFileName(argc, argv, "game_managers_folder");
-      args.algorithm1_so_filename_ = getAndValidateFileName(argc, argv, "algorithm1");
-      args.algorithm2_so_filename_ = getAndValidateFileName(argc, argv, "algorithm2");
+      //parse args for Comparative mode, and collect missing args if there are
+      try {args.map_filename_ = getAndValidateFileName(argc, argv, "game_map");}
+      catch (const std::exception& e) {missing_args.emplace_back(e.what()); }
+      try {args.game_managers_folder_name_ = getAndValidateFileName(argc, argv, "game_managers_folder");}
+      catch (const std::exception& e) {missing_args.emplace_back(e.what()); }
+      try {args.algorithm1_so_filename_ = getAndValidateFileName(argc, argv, "algorithm1");}
+      catch (const std::exception& e) {missing_args.emplace_back(e.what()); }
+      try {args.algorithm2_so_filename_ = getAndValidateFileName(argc, argv, "algorithm2");}
+      catch (const std::exception& e) {missing_args.emplace_back(e.what()); }
 
       //build allow-lists for this mode
       const std::vector<std::string> exactFlags = {
@@ -41,7 +47,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
       // After parsing, verify no extras
       auto bad = collectUnsupportedArgs(argc, argv, exactFlags, kvPrefixes);
       if (!bad.empty()) {
-           ErrorMsg::error_and_usage("Unsupported arguments: " + joinArgs(bad));
+          ErrorMsg::error_and_usage("Unsupported arguments: " + joinArgs(bad));
           exit(EXIT_FAILURE);
       }
 
@@ -51,6 +57,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
       args.mode_ = Mode::Competitive;
 
       //parse args for Competitive mode
+      //TODO: ADD TRY CATCH
       args.maps_folder_name_ = getAndValidateFileName(argc, argv, "game_maps_folder");
       args.game_manager_so_name_ = getAndValidateFileName(argc, argv, "game_manager_so_filename");
       args.algos_folder_name_ = getAndValidateFileName(argc, argv, "algorithms_folder");
@@ -71,7 +78,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
       // After parsing, verify no extras
       auto bad = collectUnsupportedArgs(argc, argv, exactFlags, kvPrefixes);
       if (!bad.empty()) {
-           ErrorMsg::error_and_usage("Unsupported arguments: " + joinArgs(bad));
+          ErrorMsg::error_and_usage("Unsupported arguments: " + joinArgs(bad));
           exit(EXIT_FAILURE);
       }
   }
@@ -82,22 +89,25 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
 
   try {
     if (auto val = getFlagValue(argc, argv, "num_threads")) { //if not, no flag, we don't change threads_num_
-      if (std::all_of(val->begin(), val->end(), ::isdigit)){ //if its an integer
+      if (std::all_of(val->begin(), val->end(), ::isdigit)){ //if it's an integer
         if (std::stoi(*val) >= 2) { //if its 1 we don't change
             args.threads_num_ += std::stoi(*val);
         }
       }
       else {
-           ErrorMsg::error_and_usage("Illegal argument: num_threads value must be a positive integer");
-          exit(EXIT_FAILURE);
+          missing_args.emplace_back("Illegal argument: num_threads value must be a positive integer");
       }
     }
   }
   //getFlagValue throws an error if the flag's value is missing
   catch (const std::exception& e) {
-     ErrorMsg::error_and_usage(e.what());
-    exit(EXIT_FAILURE);
+   missing_args.emplace_back(e.what());
   }
+
+    if (!missing_args.empty())
+    {
+        ErrorMsg::error_and_usage("Missing arguments: " + joinArgs(missing_args));
+    }
   return args;
 }
 
@@ -132,21 +142,20 @@ std::optional<std::string> CmdArgsParser::getFlagValue(int argc, char* argv[], c
 }
 
 //it's called file name, but it's also a folder name :)
-std::string CmdArgsParser::getAndValidateFileName(int argc, char* argv[], std::string fileName) {
+std::string CmdArgsParser::getAndValidateFileName(int argc, char* argv[], std::string argName) {
     try {
-        if (auto val = getFlagValue(argc, argv, fileName)) {
-            return *val; //we will check if the name is legal (there is such file/folder, can be opoend, etc) when trying to open the files
+        if (auto val = getFlagValue(argc, argv, argName)) {
+            return *val; //we will check if the name is legal (there is such file/folder, can be opend, etc) when trying to open the files
         }
-        else {
-             ErrorMsg::error_and_usage("Missing argument: " + fileName);
-            exit(EXIT_FAILURE);
+        else { //argument's name is missing
+             throw std::runtime_error(argName);
         }
     }
 
+    //argument's value is missing
     //getFlagValue throws an error if the flag's value is missing (the flag is there, but its value is missing)
     catch (const std::exception& e) {
-        ErrorMsg::error_and_usage(e.what());
-        exit(EXIT_FAILURE);
+       throw std::runtime_error(e.what());
     }
 }
 
