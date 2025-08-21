@@ -21,12 +21,12 @@ public:
             size_t map_height_; //rows num
             size_t max_steps_;
             size_t num_shells_;
-            UserCommon_207177197_301251571::SatelliteViewImpl map_;
+            std::unique_ptr<SatelliteView> map_;
         };
 
     MapArgs parse(const std::string& filename);
 
 private:
     std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata(std::vector<std::string> lines);
-    UserCommon_207177197_301251571::SatelliteViewImpl parseMap(std::vector<std::string> lines, size_t height, size_t width);
+    std::unique_ptr<SatelliteView> parseMap(std::vector<std::string> lines, size_t height, size_t width);
 };

@@ -91,7 +91,7 @@ std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata
 }
 
 //get satellite
-UserCommon_207177197_301251571::SatelliteViewImpl parseMap(std::vector<std::string> lines, size_t height, size_t width)
+std::unique_ptr<SatelliteView> parseMap(std::vector<std::string> lines, size_t height, size_t width)
 {
     std::vector<std::vector<char>> boardData(height, std::vector<char>(width));
 
@@ -111,7 +111,10 @@ UserCommon_207177197_301251571::SatelliteViewImpl parseMap(std::vector<std::stri
             boardData[y][x] = rowLine[x]; //boardData[row][column] → boardData[y][x]
         }
     }
-    return UserCommon_207177197_301251571::SatelliteViewImpl(boardData);
+
+    std::unique_ptr<SatelliteView> satellite_view =
+        std::make_unique<UserCommon_207177197_301251571::SatelliteViewImpl>(boardData);
+    return satellite_view;
 }
 
 

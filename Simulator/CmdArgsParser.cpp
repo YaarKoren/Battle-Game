@@ -8,13 +8,11 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
   const bool hasCompetition = hasFlag(argc, argv, "-competition");
 
   if (hasComparative && hasCompetition) {
-      ErrorMsg::error_and_usage("Choose exactly one mode (comparative or competition), can't have both");
-      exit(EXIT_FAILURE);
+      throw std::runtime_error("Choose exactly one mode (comparative or competition), can't have both");
   }
 
   if (!hasComparative && !hasCompetition) {
-      ErrorMsg::error_and_usage("Missing argument: simulation mode (comparative or competition)");
-      exit(EXIT_FAILURE);
+      throw std::runtime_error("Missing argument: simulation mode (comparative or competition)");
   }
 
     std::vector<std::string> missing_args;
@@ -47,10 +45,8 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
       // After parsing, verify no extras
       auto bad = collectUnsupportedArgs(argc, argv, exactFlags, kvPrefixes);
       if (!bad.empty()) {
-          ErrorMsg::error_and_usage("Unsupported arguments: " + joinArgs(bad));
-          exit(EXIT_FAILURE);
+          throw std::runtime_error ("Unsupported arguments: " + joinArgs(bad) );
       }
-
   }
 
   else { //competition
@@ -80,8 +76,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
       // After parsing, verify no extras
       auto bad = collectUnsupportedArgs(argc, argv, exactFlags, kvPrefixes);
       if (!bad.empty()) {
-          ErrorMsg::error_and_usage("Unsupported arguments: " + joinArgs(bad));
-          exit(EXIT_FAILURE);
+         throw std::runtime_error ("Unsupported arguments: " + joinArgs(bad) );
       }
   }
 
@@ -107,8 +102,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
 
   if (!missing_args.empty())
   {
-      ErrorMsg::error_and_usage("Missing arguments: " + joinArgs(missing_args));
-      exit(EXIT_FAILURE);
+      throw std::runtime_error("Missing arguments: " + joinArgs(missing_args));
   }
   return args;
 }
@@ -144,7 +138,7 @@ std::optional<std::string> CmdArgsParser::getFlagValue(int argc, char* argv[], c
 }
 
 //it's called file name, but it's also a folder name :)
-std::string CmdArgsParser::getAndValidateFileName(int argc, char* argv[], std::string argName) {
+std::string CmdArgsParser::getAndValidateFileName(int argc, char* argv[], const std::string& argName) {
     try {
         if (auto val = getFlagValue(argc, argv, argName)) {
             return *val; //we will check if the name is legal (there is such file/folder, can be opend, etc) when trying to open the files
@@ -160,6 +154,16 @@ std::string CmdArgsParser::getAndValidateFileName(int argc, char* argv[], std::s
        throw std::runtime_error(e.what());
     }
 }
+
+std::string CmdArgsParser::joinArgs(const std::vector<std::string>& args, const std::string& sep) {
+    std::string out;
+    for (size_t i = 0; i < args.size(); ++i) {
+        out += args[i];
+        if (i + 1 < args.size()) out += sep;
+    }
+    return out;
+}
+
 
 
 
@@ -207,13 +211,4 @@ std::vector<std::string> CmdArgsParser::collectUnsupportedArgs(
     return bad;
 }
 
-
-std::string CmdArgsParser::joinArgs(const std::vector<std::string>& args, const std::string& sep) {
-    std::string out;
-    for (size_t i = 0; i < args.size(); ++i) {
-        out += args[i];
-        if (i + 1 < args.size()) out += sep;
-    }
-    return out;
-}
 

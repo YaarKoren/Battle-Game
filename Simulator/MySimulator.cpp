@@ -11,20 +11,87 @@ namespace fs = std::filesystem;
 MySimulator::MySimulator(CmdArgsParser::CmdArgs args)
     : args_(std::move(args)) {}
 
-void main(int argc, char* argv[]) {
-  std::cout << "1..2.. test\n";
-  auto args = CmdArgsParser::parse(argc, argv); //prints msg and exits on bad args
-  MySimulator sim(std::move(args));
-  sim.run();
+int main(int argc, char* argv[]) {
+  //std::cout << "1..2.. test\n";
+  std::optional<decltype(CmdArgsParser::parse(argc, argv))> args;
+
+  try {
+      args.emplace(CmdArgsParser::parse(argc, argv));
+  } catch (const std::exception& e) {
+      ErrorMsg::error_and_usage(e.what());;
+      return 1;
+  } catch (...) { //add general catch block for safety
+      ErrorMsg::error_and_usage("unknown error");
+      return 1;
+  }
+
+    MySimulator sim(std::move(*args));
+    try {
+        const int rc = sim.run();   // no exit()
+        //TODO: maybe add printing to screen if run failed or succeeded
+        return rc;                  //0- success, 1-fail
+    } catch (const std::exception& e) {
+        std::cerr << "Fatal error: " << e.what() << "\n";
+        return 2; // non-zero so shell knows it failed
+    } catch (...) {                     //general catch block for safety
+        std::cerr << "Fatal unknown error.\n";
+        return 3;
+    }
 }
 
-void MySimulator::run() {
+int MySimulator::run() { //int cuz we want the program to always finish gracefully through main, so check for success.
+   //Build the full output into a string buffer
+   std::ostringstream oss;
+   //TODO: catch errors (in reading input files - map + .so files) add them to the string
+   //after finishing, print it to input_errors file, created in the working directory
+   //if file can't be opened, print a msg and print it to screen
+   //specs: "You should write a short description of all recovered errors found in the input file,
+   //into input_errors.txt file. Create this file only if there are errors."
+
+    //TODO: separate the run to (1) read input files, then create errors_file or print error and finish
+    //TODO:                    (2) run games
+
+
+    //pass oss
+
+    //catch (const std::exception& e)
+    //ErrorMsg: error_and_usage(*e.what);
+    //return 1;
+
+
+    // oss << *e.what();
+
+
   if (args_.mode_ == Mode::Comparative) {
-    MySimulator::runComparative();
+    try
+    {
+        MySimulator::runComparative();
+
+        return 0;
+    }
+      catch (...)
+      {
+          return 1;
+      }
   }
   if (args_.mode_ == Mode::Competitive) {
-    MySimulator::runCompetitive();
+    try {
+        MySimulator::runCompetitive();
+        //TODO: add print input_errors file
+            return 0;
+        }
+      catch (...)
+      {
+          return 1;
+      }
   }
+
+    std::string errors_input_content = oss.str();
+    //choose destination for the errors_input - file / screen
+
+    //output
+
+    return 0;
 }
 
 void MySimulator::runComparative() {
@@ -35,12 +102,13 @@ void MySimulator::runComparative() {
     const std::string algo2SO        = args_.algorithm2_so_filename_;
 
     // --- 0) Load the map snapshot and params from map file
-    MapParser mapParser;
+
     MapParser::MapArgs map_args;
 
     try
     {
-        map_args = mapParser.parse(mapPath);
+        MapParser mapParser
+        ;map_args = mapParser.parse(mapPath);
     }
     catch (const std::exception& e)
     {
@@ -53,7 +121,8 @@ void MySimulator::runComparative() {
     size_t map_height = map_args.map_height_;
     size_t max_steps = map_args.max_steps_;
     size_t num_shells = map_args.num_shells_;
-    UserCommon_207177197_301251571::SatelliteViewImpl map = map_args.map_; //it's ok cuz we compile the Simulator with the common + UserCommon code
+
+    std::unique_ptr<SatelliteView> map = std::move(map_args.map_);
 
 
     // --- 1) dlopen algorithm .so files (auto-registration happens here) ---
@@ -111,7 +180,9 @@ void MySimulator::runComparative() {
 
     //get so files from folder
     std::vector<std::string> gm_so_paths = getSoFilesList(managersFolder);
-    if (gm_so_paths.empty()) ErrorMsg::error_and_usage("No .so files in Game Managers dir:  " + managersFolder);
+    if (gm_so_paths.empty())
+        throw std::runtime_error("No .so files in Game Managers dir:  " + managersFolder);
+        //TODO: return? throw?
     size_t gm_so_paths_num = gm_so_paths.size();
 
     //load and validate
@@ -153,7 +224,7 @@ void MySimulator::runComparative() {
 
         //run game and
         GameResult game_result = GM->run(
-                map_width, map_height, map, map_name,
+                map_width, map_height, *map, map_name,
                 max_steps, num_shells,
                 *player1, getCleanFileName(algo1SO), *player1, getCleanFileName(algo2SO),
                 p1_algo_factory, p2_algo_factory);
@@ -179,9 +250,7 @@ void MySimulator::runCompetitive() {
 
     // --- 0) dlopen Game Manager .so file (auto-registration happens here) ---
     //TODO: maybe improve this (We need only one, no need of vector) and make it a func
-    std::vector<std::unique_ptr<SharedLib>> gm_libs; //Game Manager .so handles
-                                                     // Keep SO handles alive for the entire match (RAII)
-                                                     //create a vector, even thought it's only one so file, cuz this is what out helper func expects to get
+
 
     size_t index = 0;
     //TODO: understand if and why index is needed here? only one gm registered in the registrar
@@ -189,6 +258,10 @@ void MySimulator::runCompetitive() {
     //load and validate
     try
     {
+        std::vector<std::unique_ptr<SharedLib>> gm_libs; //Game Manager .so handles
+                                                        // Keep SO handles alive for the entire match (RAII)
+                                                         //create a vector, even thought it's only one so file, cuz this is what out helper func expects to get
+
         index = loadGameManagerAndGetIndex(managerPath, gm_libs);
     }
     catch (const std::exception& e)
@@ -234,7 +307,7 @@ void MySimulator::runCompetitive() {
         }
     }
 
-    int N = idxs.size(); //number of successfully loaded algos, that are going to play
+    size_t N = idxs.size(); //number of successfully loaded algos, that are going to play
     if (N == 0) ErrorMsg::error_and_usage("All .so files in the algorithms folder: " + algosFolder + "could not be loaded");
     if (N == 1) ErrorMsg::error_and_usage("Only one .so file in the algorithms folder: " + algosFolder + " could be loaded");
 
@@ -297,7 +370,7 @@ void MySimulator::runCompetitive() {
         }
     }
 
-    int K = maps_data.size(); //number of maps successfully read
+    size_t K = maps_data.size(); //number of maps successfully read
 
     if (K == 0) // no maps were read successfully
     {
@@ -313,10 +386,9 @@ void MySimulator::runCompetitive() {
     size_t map_height;
     size_t max_steps;
     size_t num_shells;
-    UserCommon_207177197_301251571::SatelliteViewImpl map;
+    std::unique_ptr<SatelliteView> map;
     int opp;
 
-    int winner;
     bool isOnlyHalfGames;
 
     for (int k = 0; k < K; ++k)
@@ -327,7 +399,7 @@ void MySimulator::runCompetitive() {
         map_height = maps_data[k].map_height_;
         max_steps = maps_data[k].max_steps_;
         num_shells = maps_data[k].num_shells_;
-        map = maps_data[k].map_;
+        map = std::move(maps_data[k].map_);
 
         isOnlyHalfGames = (N % 2 == 0) && (k == N/2 - 1); //  offset == N/2
                                                           //specs :Note that in the case of k = N/2 - 1 (if N is even),
@@ -512,7 +584,7 @@ std::vector<std::string> MySimulator::getFilesList(const std::string& dir_path) 
 }
 
 //assuming N >=2, l >= 0, k > 0
-int MySimulator::getOpponentIdx(int l, int k, int N)
+int MySimulator::getOpponentIdx(const int l, const int k, const size_t N)
 {
     // offset = 1 + (k % (N-1))
     const size_t offset = 1 + (k % (N - 1));
@@ -528,10 +600,10 @@ int MySimulator::getOpponentIdx(int l, int k, int N)
 
 
 
-void runGameAndKeepScore(const int l, const int opp, std::vector<AlgoAndScore> algos_and_scores,
+void MySimulator::runGameAndKeepScore(const int l, const int opp, std::vector<AlgoAndScore> algos_and_scores,
     const size_t map_width, const size_t map_height, const size_t max_steps, const size_t num_shells,
     const std::string& map_name,
-    const UserCommon_207177197_301251571::SatelliteViewImpl& map,
+    const std::unique_ptr<SatelliteView>& map,
     const std::unique_ptr<AbstractGameManager>& GM
     )
 {
@@ -544,7 +616,7 @@ void runGameAndKeepScore(const int l, const int opp, std::vector<AlgoAndScore> a
 
     //run the game with the 2 creates players and their corresponding tank algorithms
     const GameResult game_result = GM->run(
-        map_width, map_height, map, map_name,
+        map_width, map_height, *map, map_name,
         max_steps, num_shells,
         *player1, algos_and_scores[l].name, *player1, algos_and_scores[opp].name,
         algos_and_scores[l].algo_factory, algos_and_scores[opp].algo_factory);

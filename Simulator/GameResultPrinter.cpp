@@ -2,7 +2,6 @@
 
 #include "GameResultPrinter.h"
 
-#define MAX_STEPS_AFTER_SHELLS_END 40
 #define COMPARATIVE_STR_FOR_UNQ_PATH "comparative_results"
 #define COMPETITION_STR_FOR_UNQ_PATH "competition"
 
@@ -16,18 +15,19 @@ void GameResultPrinter::printComparativeResults(
     std::string algo2_so_filename,
     size_t max_steps) {
 
-    //---1) Build (key,item*) rows
+    // ---1) Process the resluts data
+    //---1.a) Build (key,item*) rows
     std::vector<std::pair<ResultKey, const GMNameAndResult*>> rows;
     rows.reserve(results.size());
     for (const auto& res : results) {
       rows.push_back({ makeKey(res.result, map_width, map_height), &res });
     }
 
-    //---2)Sort by key
+    //---1.b)Sort by key
     std::sort(rows.begin(), rows.end(),
           [](const auto& A, const auto& B){ return ResultKeyLess{}(A.first, B.first); });
 
-    //---3) Scan consecutive equal keys into groups
+    //---1.c) Scan consecutive equal keys into groups
     std::vector<Group> groups;
     for (size_t i = 0; i < rows.size(); ) {
         size_t j = i + 1;
@@ -44,7 +44,7 @@ void GameResultPrinter::printComparativeResults(
         i = j; // advance to next group
     }
 
-    //---4) Sort groups; Put the biggest group first (deterministic tie-break optional)
+    //---1.d) Sort groups; Put the biggest group first (deterministic tie-break optional)
     auto name_of = [](const Group& g){
         return g.members.empty() ? std::string() : g.members.front()->name;
     };
@@ -53,67 +53,80 @@ void GameResultPrinter::printComparativeResults(
       return name_of(a) < name_of(b);
     });
 
-    //---5) Try to open file, else fallback to screen with error
-    std::string path = makeUniquePath(folder_path, COMPARATIVE_STR_FOR_UNQ_PATH);
-    std::ofstream out(path);
-    bool to_screen = false;
-    if (!out) {
-        std::cerr << "ERROR: cannot create output file: " << path
-                  << " — printing results to screen instead.\n";
-        to_screen = true;
-    }
-    std::ostream& os = to_screen ? std::cout : out;
+    //---2) Build the full output into a string buffer
+    std::ostringstream oss;
 
-    //---6) Header (lines 1–4)
-    os << "game_map=" << game_map_filename << "\n";
-    os << "algorithm1=" << algo1_so_filename << "\n";
-    os << "algorithm2=" << algo1_so_filename << "\n";
-    os << "\n";
+    //---3) Insert data the does not require processing
+    // Lines 1–4
+    oss << "game_map=" << game_map_filename << "\n";
+    oss << "algorithm1=" << algo1_so_filename << "\n";
+    oss << "algorithm2=" << algo1_so_filename << "\n";
+    oss << "\n";
 
-    //---7) Groups info
+    //---4) Insert the processed data
     auto emit_group = [&](const Group& g){ //a local lambda function
       									   //[&] → capture everything by reference (so the lambda can use os,
 											//max_steps, etc., from the outer scope).
 
         // 5th line: comma-separated biggest list of GM names (or for subsequent groups the list as well)
         for (size_t i=0;i<g.members.size();++i) {
-            if (i) os << ",";
-            os << g.members[i]->name;
+            if (i) oss << ",";
+            oss << g.members[i]->name;
         }
-        os << "\n";
+        oss << "\n";
 
         // 6th line: result message (as in assignment 2)
-        os << resultMessage(g.members.front()->result, max_steps) << "\n";
+        oss << resultMessage(g.members.front()->result, max_steps) << "\n";
 
         // 7th line: round number
-        os << g.members.front()->result.rounds << "\n";
+        oss << g.members.front()->result.rounds << "\n";
 
         // 8th line on: full map
-        os << g.key.final_snapshot;
+        oss << g.key.final_snapshot;
     };
 
     if (!groups.empty()) {
         emit_group(groups.front()); //.front() returns a reference to the first element in the vector
         for (size_t i=1;i<groups.size();++i) {
-            os << "\n"; // empty line between groups
+            oss << "\n"; // empty line between groups
             emit_group(groups[i]);
         }
     }
+
+    //---5) Finalize the strinf buffer
+    const std::string content = oss.str();
+
+    // ---6) Decide destination: file under game managers folder, or screen (if failed to open the file)
+    // and print
+    const std::string out_path = makeUniquePath(folder_path, COMPARATIVE_STR_FOR_UNQ_PATH);
+
+    std::ofstream out(out_path);
+    if (!out) {
+        std::cerr << "ERROR: cannot create output file: " << out_path
+                  << " — printing results to screen instead.\n";
+        std::cout << content;
+        return;
+    }
+
+    out << content;
 }
+
 
 void GameResultPrinter::printCompetitionResults(const std::vector<AlgoAndScoreSmall>& algos_and_scores,
                                   const std:: string& maps_folder_path,
                                   const std::string& game_manager_clean_name,
                                   const std::string& algos_folder_path) {
 
-    // 1) Build the full output into a string buffer
+    //---1) Build the full output into a string buffer
     std::ostringstream oss;
 
+    //---2) Insert data the does not require processing
     // Lines 1–3
     oss << "game_maps_folder=" << maps_folder_path << "\n";
     oss << "game_manager="     << game_manager_clean_name << "\n";
     oss << "\n";
 
+    //---3) Process the data that needs to be processed
     // Copy then sort by total score (desc). Tie-breaker by name (asc) for determinism.
     //specs: “Algorithms with the same score can appear in any order.”
     //added a name tie‑break so output is deterministic
@@ -124,14 +137,17 @@ void GameResultPrinter::printCompetitionResults(const std::vector<AlgoAndScoreSm
             return a.name < b.name;                              // tie-break
         });
 
+    //---4) Insert the processed data
     // Lines 4+ : "<algorithm name> <total score>"
     for (const auto& r : rows) {
         oss << r.name << ' ' << r.score << "\n";
     }
 
+    //---5) Finalize the strinf buffer
     const std::string content = oss.str();
 
-    // 2) Decide destination: file under *algorithms folder* or screen on failure.
+    // ---6) Decide destination: file under algorithms folder, or screen (if failed to open the file)
+    // and Print
     const std::string out_path = makeUniquePath(algos_folder_path, COMPETITION_STR_FOR_UNQ_PATH);
 
     std::ofstream out(out_path);
@@ -143,11 +159,7 @@ void GameResultPrinter::printCompetitionResults(const std::vector<AlgoAndScoreSm
     }
 
     out << content;
-
 }
-
-
-
 
 // time helper function
 std::string GameResultPrinter::makeUniquePath(std::string folder_path, std::string mode_name) {
@@ -227,7 +239,6 @@ std::string GameResultPrinter::reasonToString(GameResult::Reason r) {
 }
 
 std::string GameResultPrinter::resultMessage(const GameResult& r, size_t max_steps) {
-    //TODO: Adjust to match exact Assignment 2 wording
     std::ostringstream oss;
     size_t p1_num_of_tanks = getNumberOfTanks(r, 1);
     size_t p2_num_of_tanks = getNumberOfTanks(r, 2);

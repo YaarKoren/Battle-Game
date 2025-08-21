@@ -3,6 +3,8 @@
 #include <string>
 #include "../common/GameResult.h"
 
+#define MAX_STEPS_AFTER_SHELLS_END 40
+
 struct GMNameAndResult {
         std::string name; // own the name
         GameResult  result; // own the result (movable because of unique_ptr)

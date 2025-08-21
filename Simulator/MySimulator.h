@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <optional>
 #include <filesystem>
+#include <utility>
 
 #include "../common/ActionRequest.h"
 #include "../common/BattleInfo.h"
@@ -37,7 +38,7 @@ public:
     explicit MySimulator(CmdArgsParser::CmdArgs args);
     ~MySimulator() = default;
 
-    void run();                     // decides comparative vs competitive
+    int run();                     // decides comparative vs competitive
 
 
 private:
@@ -56,11 +57,11 @@ private:
 
     //competition mode - helper functions
     static std::vector<std::string> getFilesList(const std::string& dir_path);
-    static int MySimulator::getOpponentIdx(int i, int k, int N);
-    void runGameAndKeepScore(int l,  int opp, std::vector<AlgoAndScore> algos_and_scores,
+    static int MySimulator::getOpponentIdx(int l, int k, size_t N);
+    static void runGameAndKeepScore(int l,  int opp, std::vector<AlgoAndScore> algos_and_scores,
         size_t map_width,  size_t map_height, size_t max_steps, size_t num_shells,
         const std::string& map_name,
-        const UserCommon_207177197_301251571::SatelliteViewImpl& map,
+        const std::unique_ptr<SatelliteView>& map,
         const std::unique_ptr<AbstractGameManager>& GM);
 
 

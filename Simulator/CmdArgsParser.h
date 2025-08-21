@@ -43,7 +43,7 @@ private:
     //helper functions//
     static bool hasFlag(int argc, char* argv[], const std::string& flag);
     static std::optional<std::string> getFlagValue(int argc, char* argv[], const std::string& flag);
-    static std::string getAndValidateFileName(int argc, char* argv[], std::string fileName);
+    static std::string getAndValidateFileName(int argc, char* argv[], const std::string& argName);
     static std::string joinArgs(const std::vector<std::string>& args, const std::string& sep = ", ");
 
     //helper functions to print list of unsupported args
