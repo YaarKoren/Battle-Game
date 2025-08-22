@@ -42,9 +42,26 @@ public:
 
 
 private:
+    CmdArgsParser::CmdArgs args_;
+    Mode mode_;
+    bool verbose_;
+    int threads_num_;
+
+    //comparative mode
+    std::string mapPath;
+    std::string managersFolder;
+    std::string algo1SO;
+    std::string algo2SO;
+
+    //competition mode
+    std::string mapsFolder;
+    std::string managerPath;
+    std::string algosFolder;
+
+
     void runComparative();          // non-static, uses args_
     void runCompetitive();          // non-static, uses args_
-    CmdArgsParser::CmdArgs args_;
+
 
     //so files loading - helper functions
     static std::string getCleanFileName(const std::string& path);

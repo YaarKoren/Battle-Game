@@ -91,7 +91,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
             args.threads_num_ += std::stoi(*val);
         }
       }
-      else {
+      else { //flag's value exist, but illegal
           missing_args.emplace_back("Illegal argument: num_threads value must be a positive integer");
       }
     }

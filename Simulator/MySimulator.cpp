@@ -9,11 +9,38 @@ namespace fs = std::filesystem;
 
 
 MySimulator::MySimulator(CmdArgsParser::CmdArgs args)
-    : args_(std::move(args)) {}
+    : args_(std::move(args))
+{
+    mode_ = args_.mode_;
+    verbose_ = args_.verbose_;
+    threads_num_ = args_.threads_num_;
+
+    if (mode_ == Mode::Comparative) {
+        mapPath        = args_.map_filename_;
+        managersFolder = args_.game_managers_folder_name_;
+        algo1SO        = args_.algorithm1_so_filename_;
+        algo2SO        = args_.algorithm2_so_filename_;
+        mapsFolder.clear();
+        managerPath.clear();
+        algosFolder.clear();
+
+    } else if (mode_ == Mode::Competitive)
+    {
+        mapsFolder     = args_.maps_folder_name_;
+        managerPath    = args_.game_manager_so_name_;
+        algosFolder    = args_.algos_folder_name_;
+        mapPath.clear();
+        managersFolder.clear();
+        algo1SO.clear();
+        algo2SO.clear();
+    }
+}
 
 int main(int argc, char* argv[]) {
   //std::cout << "1..2.. test\n";
-  std::optional<decltype(CmdArgsParser::parse(argc, argv))> args;
+
+   //---0) parse cmd args
+   std::optional<decltype(CmdArgsParser::parse(argc, argv))> args;
 
   try {
       args.emplace(CmdArgsParser::parse(argc, argv));
@@ -25,28 +52,29 @@ int main(int argc, char* argv[]) {
       return 1;
   }
 
-    MySimulator sim(std::move(*args));
-    try {
-        const int rc = sim.run();   // no exit()
-        //TODO: maybe add printing to screen if run failed or succeeded
-        return rc;                  //0- success, 1-fail
-    } catch (const std::exception& e) {
-        std::cerr << "Fatal error: " << e.what() << "\n";
-        return 2; // non-zero so shell knows it failed
-    } catch (...) {                     //general catch block for safety
-        std::cerr << "Fatal unknown error.\n";
-        return 3;
-    }
+    //---1)run the simulaion
+  MySimulator sim(std::move(*args));
+  try {
+    const int rc = sim.run();   // no exit()
+    //TODO: maybe add printing to screen if run failed or succeeded
+    return rc;                  //0- success, 1-fail
+  } catch (const std::exception& e) {
+    std::cerr << "Fatal error: " << e.what() << "\n";
+    return 2; // non-zero so shell knows it failed
+  } catch (...) {                     //general catch block for safety
+     std::cerr << "Fatal unknown error.\n";
+     return 3;
+  }
 }
 
-int MySimulator::run() { //int cuz we want the program to always finish gracefully through main, so check for success.
-   //Build the full output into a string buffer
-   std::ostringstream oss;
-   //TODO: catch errors (in reading input files - map + .so files) add them to the string
-   //after finishing, print it to input_errors file, created in the working directory
-   //if file can't be opened, print a msg and print it to screen
-   //specs: "You should write a short description of all recovered errors found in the input file,
-   //into input_errors.txt file. Create this file only if there are errors."
+int MySimulator::run() //int cuz we want the program to always finish gracefully through main, so check for success.
+{
+
+
+    // a string buffer, to build the input_errors file (for the recoverable errors in map + .so file)
+    std::ostringstream oss;
+
+
 
     //TODO: separate the run to (1) read input files, then create errors_file or print error and finish
     //TODO:                    (2) run games
@@ -62,44 +90,48 @@ int MySimulator::run() { //int cuz we want the program to always finish graceful
     // oss << *e.what();
 
 
-  if (args_.mode_ == Mode::Comparative) {
-    try
-    {
-        MySimulator::runComparative();
+    if (args_.mode_ == Mode::Comparative) {
+        try
+        {
+            MySimulator::runComparative();
 
-        return 0;
-    }
-      catch (...)
-      {
-          return 1;
-      }
-  }
-  if (args_.mode_ == Mode::Competitive) {
-    try {
-        MySimulator::runCompetitive();
-        //TODO: add print input_errors file
-            return 0;
         }
-      catch (...)
-      {
-          return 1;
-      }
-  }
+        catch (...)
+        {
+            return 1;
+        }
+    }
+    if (args_.mode_ == Mode::Competitive) {
+        try {
+            MySimulator::runCompetitive();
+        }
+        catch (...)
+        {
+            return 1;
+        }
+    }
 
+
+    //print input_errors to a file / to the screen
     std::string errors_input_content = oss.str();
-    //choose destination for the errors_input - file / screen
 
-    //output
+    if (!errors_input_content.empty()) { //specs: "Create this file only if there are errors"
+    //choose destination for the errors_input
+    const std::string out_path = "input_errors.txt"; // in working directory (according to forum's specs)
+    std::ofstream out(out_path);
+    if (!out) {
+        std::cerr << "ERROR: cannot create output file: " << out_path
+                  << " — printing results to screen instead.\n";
+        std::cout << errors_input_content;
+    }
+    out << errors_input_content;
+    }
 
     return 0;
 }
 
 void MySimulator::runComparative() {
-    const bool verbose = args_.verbose_();
-    const std::string mapPath        = args_.map_filename_;
-    const std::string managersFolder = args_.game_managers_folder_name_;
-    const std::string algo1SO        = args_.algorithm1_so_filename_;
-    const std::string algo2SO        = args_.algorithm2_so_filename_;
+
 
     // --- 0) Load the map snapshot and params from map file
 
@@ -220,7 +252,7 @@ void MySimulator::runComparative() {
         std::string name = it->name();
         name = getCleanFileName(name);
         //Create GM instance, using the registered factories
-        std::unique_ptr<AbstractGameManager> GM = it->createGameManager(verbose);
+        std::unique_ptr<AbstractGameManager> GM = it->createGameManager(verbose_);
 
         //run game and
         GameResult game_result = GM->run(
@@ -243,11 +275,6 @@ void MySimulator::runComparative() {
 
 
 void MySimulator::runCompetitive() {
-    const bool verbose = args_.verbose_();
-    const std::string mapsFolder     = args_.maps_folder_name_;
-    const std::string managerPath    = args_.game_manager_so_name_;
-    const std::string algosFolder    = args_.algos_folder_name_;
-
     // --- 0) dlopen Game Manager .so file (auto-registration happens here) ---
     //TODO: maybe improve this (We need only one, no need of vector) and make it a func
 
@@ -276,7 +303,7 @@ void MySimulator::runCompetitive() {
     auto it = GMReg.begin(); std::advance(it, static_cast<long>(index));
 
     //Create GM instance, using the registered factories
-    std::unique_ptr<AbstractGameManager> GM = it->createGameManager(verbose);
+    std::unique_ptr<AbstractGameManager> GM = it->createGameManager(verbose_);
 
     // --- 2) dlopen all Algorithm .so files from folder (auto-register) ---
     // TODO make it a func

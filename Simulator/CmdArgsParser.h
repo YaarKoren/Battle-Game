@@ -21,7 +21,7 @@ public:
         std::string submitters_ids_;
         Mode mode_;
         bool verbose_ = false; //optional arg; verbose_ == true iff this flag is given
-        unsigned threads_num_ = 1; //optional arg; default is 1
+        int threads_num_ = 1; //optional arg; default is 1
 
         //Comparative
         std::string map_filename_;
