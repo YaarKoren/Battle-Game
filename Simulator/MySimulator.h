@@ -82,10 +82,14 @@ private:
                                            TankAlgorithmFactory& p1_algo_factory, TankAlgorithmFactory& p2_algo_factory,
                                            size_t map_width, size_t map_height, size_t max_steps, size_t num_shells) const;
 
-    void load_and_validate_comparative(std::ostringstream& oss, std::vector<size_t>& indices) const;
+    void load_and_validate_comparative(std::ostringstream& oss, std::vector<GMObjectAndName>& GMs) const;
+
 
 
     //competition mode  helper functions
+    void load_and_validate_competition(std::unique_ptr<AbstractGameManager>& GM) const;
+    void load_and_validate_competition(std::ostringstream& oss, std::vector<size_t>& indices) const;
+
     static std::vector<std::string> getFilesList(const std::string& dir_path);
     static int MySimulator::getOpponentIdx(int l, int k, size_t N);
     static void runGameAndKeepScore(int l,  int opp, std::vector<AlgoAndScore> algos_and_scores,
