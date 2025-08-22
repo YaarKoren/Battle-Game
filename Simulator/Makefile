@@ -3,8 +3,9 @@ IDS        := 207177197_301251571
 TARGET_DIR := bin
 TARGET     := $(TARGET_DIR)/simulator_$(IDS)
 
-CXX      := g++
-CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -I. -I../common -I../UserCommon
+CXX      ?= g++-11
+CPPFLAGS := -I. -I../common -I../UserCommon   # headers go in CPPFLAGS
+CXXFLAGS := -std=c++20 -Wall -Wextra -Werror -pedantic -O2 -fPIC
 LDFLAGS  :=
 LDLIBS   := -ldl -lpthread        # keep -ldl for dlopen/dlsym, add -lpthread if you use threads
 

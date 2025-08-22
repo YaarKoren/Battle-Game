@@ -1,5 +1,3 @@
-#pragma once
-
 #include "AlgorithmRegistrar.h"
 
 AlgorithmRegistrar AlgorithmRegistrar::registrar;

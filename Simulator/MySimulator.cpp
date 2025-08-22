@@ -40,7 +40,7 @@ MySimulator::MySimulator(CmdArgsParser::CmdArgs args)
 }
 
 int main(int argc, char* argv[]) {
-  //std::cout << "1..2.. test\n";
+  std::cout << "1..2.. test\n";
 
    //---0) parse cmd args
    std::optional<decltype(CmdArgsParser::parse(argc, argv))> args;
@@ -391,7 +391,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
 }
 
 //iterate through the folder and returns a list paths of files that end with ".so"
-std::vector<std::string> getSoFilesList(const std::string& dir_path) {
+std::vector<std::string> MySimulator::getSoFilesList(const std::string& dir_path) {
     std::vector<std::string> file_paths;
     for (const auto& e : fs::directory_iterator(fs::absolute(dir_path))) {
         if (e.is_regular_file() && e.path().extension() == ".so")
@@ -631,7 +631,7 @@ void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::ve
     //struct holds: name + player factory + tank algorithm factory + points
     algos_and_scores.reserve(N);
     const auto& algoReg = AlgorithmRegistrar::getAlgorithmRegistrar();
-    for (int i = 0; i < N; ++i)
+    for (size_t i = 0; i < N; ++i)
     {
         auto iter = algoReg.begin(); std::advance(iter, static_cast<long>(indices[i]));
 
@@ -667,7 +667,7 @@ void MySimulator::read_maps(std::ostringstream& oss, std::vector<MapParser::MapA
         throw std::runtime_error ("There are no no maps file in the maps folder: " + mapsFolder);
     }
 
-    for (int i = 0; i < maps_num; ++i)
+    for (size_t i = 0; i < maps_num; ++i)
     {
         //try to read and catch errors
         try

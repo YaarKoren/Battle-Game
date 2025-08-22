@@ -12,7 +12,7 @@ Board::Board(int w, int h) : width_(w), height_(h) {
 Board::~Board() {
     for (int y = 0; y < height_; ++y) {
         for (int x = 0; x < width_; ++x) {
-            for (GameObject* obj : grid[y][x]) {
+            for ([[maybe_unused]] GameObject* obj    : grid[y][x]) {
                 //delete obj;  // Only if Board owns the objects
             }
             grid[y][x].clear();

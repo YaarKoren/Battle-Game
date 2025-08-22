@@ -24,7 +24,7 @@ public:
             std::unique_ptr<SatelliteView> map_;
         };
 
-    MapArgs parse(const std::string& filename);
+    static MapArgs parse(const std::string& filename);
 
 private:
     static std::tuple<std::string, size_t, size_t, size_t, size_t> parseMetadata(std::vector<std::string> lines);

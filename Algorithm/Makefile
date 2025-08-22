@@ -2,8 +2,9 @@
 IDS     := 207177197_301251571
 SO_NAME := Algorithm_$(IDS).so
 
-CXX      := g++
-CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -fPIC -I. -I../common -I../UserCommon
+CXX      ?= g++-11
+CPPFLAGS := -I. -I../common -I../UserCommon   # headers go in CPPFLAGS
+CXXFLAGS := -std=c++20 -Wall -Wextra -Werror -pedantic -O2 -fPIC
 LDFLAGS  := -shared
 LDLIBS   :=
 

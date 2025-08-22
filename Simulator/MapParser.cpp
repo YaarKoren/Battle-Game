@@ -65,9 +65,11 @@ std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata
 
     std::string line;
 
-    size_t max_steps, num_shells, map_height, map_width;
+    size_t max_steps  = 0;
+    size_t num_shells = 0;
+    size_t map_height = 0;
+    size_t map_width  = 0;
 
-    int rows = 0, cols = 0;
     for (int i = 1; i <= 4; ++i) {
         line = lines[i];
         line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end()); // remove all spaces
@@ -91,22 +93,22 @@ std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata
 }
 
 //get satellite
-std::unique_ptr<SatelliteView> parseMap(std::vector<std::string> lines, size_t height, size_t width)
+std::unique_ptr<SatelliteView> MapParser::parseMap(std::vector<std::string> lines, size_t height, size_t width)
 {
     std::vector<std::vector<char>> boardData(height, std::vector<char>(width));
 
-    for (int y = 0;  y < height; ++y) {
-        std::string rowLine = (5 + y < (int)lines.size()) ? lines[5 + y] : "";
-        if ((int)rowLine.length() < width)
+    for (size_t y = 0;  y < height; ++y) {
+        std::string rowLine = (5 + y < lines.size()) ? lines[5 + y] : "";
+        if (rowLine.length() < width)
         {
             rowLine += std::string(width - rowLine.length(), ' ');
         }
-        else if ((int)rowLine.length() > width)
+        else if (rowLine.length() > width)
         {
             rowLine = rowLine.substr(0, width);
         }
 
-        for (int x = 0; x < width; ++x)
+        for (size_t x = 0; x < width; ++x)
         {
             boardData[y][x] = rowLine[x]; //boardData[row][column] → boardData[y][x]
         }

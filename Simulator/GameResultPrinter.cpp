@@ -60,7 +60,7 @@ void GameResultPrinter::printComparativeResults(
     // Lines 1–4
     oss << "game_map=" << game_map_filename << "\n";
     oss << "algorithm1=" << algo1_so_filename << "\n";
-    oss << "algorithm2=" << algo1_so_filename << "\n";
+    oss << "algorithm2=" << algo2_so_filename << "\n";
     oss << "\n";
 
     //---4) Insert the processed data

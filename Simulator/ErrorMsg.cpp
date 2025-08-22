@@ -1,7 +1,7 @@
 #include "ErrorMsg.h"
 
 //maybe print exact exe name instead of "./simulator_<submitter_ids>", using "exe"
-void usage_msg(){
+void ErrorMsg::usage_msg(){
     std::cerr <<
           "Usage:\n"
           "Comparative run:\n"
@@ -17,7 +17,7 @@ void usage_msg(){
           "\n";
 }
 
-void error_and_usage(const std::string& msg) {
+void ErrorMsg::error_and_usage(const std::string& msg) {
     std::cerr << "Error: " << msg << "\n\n";
     usage_msg();
 }

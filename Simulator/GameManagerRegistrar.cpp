@@ -1,5 +1,3 @@
-#pragma once
-
 #include "GameManagerRegistrar.h"
 
 GameManagerRegistrar GameManagerRegistrar::registrar_;
