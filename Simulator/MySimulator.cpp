@@ -151,7 +151,7 @@ void MySimulator::runComparative(std::ostringstream& oss) const {
 
     // --- 3) Run each newly registered GameManager on the single map with both algos ---
     std::vector<GMNameAndResult> GMs_and_results;
-    for (auto GM_and_name : GMs)
+    for (const auto& GM_and_name : GMs)
     {
         const std::string name = GM_and_name.name;
         //run game
@@ -205,7 +205,7 @@ void MySimulator::runCompetitive(std::ostringstream& oss) const {
 
     bool isOnlyHalfGames;
 
-    for (int k = 0; k < K; ++k)
+    for (size_t k = 0; k < K; ++k)
     {
         //parse map data we got
         map_name = maps_data[k].map_name_;
@@ -222,7 +222,7 @@ void MySimulator::runCompetitive(std::ostringstream& oss) const {
 
        if (isOnlyHalfGames)
        {
-           for (int l = 0; l < N/2; ++l )
+           for (size_t l = 0; l < N/2; ++l )
            {
                opp = getOpponentIdx(l, k, N);
                runGameAndKeepScore(l, opp, algos_and_scores, map_width, map_height,
@@ -232,7 +232,7 @@ void MySimulator::runCompetitive(std::ostringstream& oss) const {
        }
        else
        {
-           for (int l = 0; l < N; ++l )
+           for (size_t l = 0; l < N; ++l )
            {
                opp = getOpponentIdx(l, k, N);
                runGameAndKeepScore(l, opp, algos_and_scores, map_width, map_height,
@@ -263,8 +263,9 @@ void MySimulator::parse_map(std::ostringstream& oss, std::string& map_name,
     std::unique_ptr<SatelliteView>& map) const
 {
     MapParser mapParser;
-    //TODO: add recoverable errors to oss (add this also to Map Parser)
     auto map_args = mapParser.parse(mapPath); //throws an error on bad map data
+    //TODO: add recoverable errors to oss (add this also to Map Parser)
+    (void)oss; // silence if truly unused
 
     map_name = map_args.map_name_;
     map_width = map_args.map_width_;
@@ -510,7 +511,7 @@ std::vector<std::string> MySimulator::getFilesList(const std::string& dir_path) 
 }
 
 //assuming N >=2, l >= 0, k > 0
-int MySimulator::getOpponentIdx(const int l, const int k, const size_t N)
+int MySimulator::getOpponentIdx(const size_t l, const size_t k, const size_t N)
 {
     // offset = 1 + (k % (N-1))
     const size_t offset = 1 + (k % (N - 1));
@@ -526,7 +527,7 @@ int MySimulator::getOpponentIdx(const int l, const int k, const size_t N)
 
 
 
-void MySimulator::runGameAndKeepScore(const int l, const int opp, std::vector<AlgoAndScore>& algos_and_scores,
+void MySimulator::runGameAndKeepScore(const size_t l, const int opp, std::vector<AlgoAndScore>& algos_and_scores,
     const size_t map_width, const size_t map_height, const size_t max_steps, const size_t num_shells,
     const std::string& map_name,
     const std::unique_ptr<SatelliteView>& map,

@@ -1,5 +1,3 @@
-#pragma once
-
 #include "../common/TankAlgorithmRegistration.h"
 #include "AlgorithmRegistrar.h"
 

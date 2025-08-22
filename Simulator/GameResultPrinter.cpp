@@ -7,7 +7,7 @@
 
 
 void GameResultPrinter::printComparativeResults(
-    std::vector<GMNameAndResult> results,
+    std::vector<GMNameAndResult>& results,
     std::string folder_path,
     size_t map_width, size_t map_height,
     std::string game_map_filename,

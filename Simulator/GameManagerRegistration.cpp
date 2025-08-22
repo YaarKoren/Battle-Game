@@ -1,5 +1,3 @@
-#pragma once
-
 #include "../common/GameManagerRegistration.h"
 #include "GameManagerRegistrar.h"
 

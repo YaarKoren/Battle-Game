@@ -26,20 +26,18 @@ class GameResultPrinter {
     GameResultPrinter() = default;
 
     virtual ~GameResultPrinter() = default;
-    void printCompetitionResults(const std::vector<AlgoAndScoreSmall>& algos_and_scores,
+    static void printCompetitionResults(const std::vector<AlgoAndScoreSmall>& algos_and_scores,
                                     const std::string& maps_folder_path,
                                     const std::string& game_manager_clean_name,
                                     const std::string& algos_folder_path);
 
-    static void printComparativeResults(std::vector<GMNameAndResult> results,
+    static void printComparativeResults(std::vector<GMNameAndResult>& results,
                                         std::string folder_path,
                                         size_t map_width, size_t map_height,
                                         std::string game_map_filename,
                                         std::string algo1_so_filename,
                                         std::string algo2_so_filename,
                                         size_t max_steps);
-
-    static void printCompetitionResults();
 
   private:
 

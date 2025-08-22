@@ -1,7 +1,11 @@
 #pragma once
 
 #include <string>
+
 #include "../common/GameResult.h"
+#include "../common/AbstractGameManager.h"
+#include "../common/PlayerRegistration.h"
+#include "../common/TankAlgorithmRegistration.h"
 
 #define MAX_STEPS_AFTER_SHELLS_END 40
 

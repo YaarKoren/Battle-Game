@@ -92,8 +92,8 @@ private:
     void read_maps(std::ostringstream& oss, std::vector<MapParser::MapArgs>& maps_data) const;
 
     static std::vector<std::string> getFilesList(const std::string& dir_path);
-    static int MySimulator::getOpponentIdx(int l, int k, size_t N);
-    static void runGameAndKeepScore(int l,  int opp, std::vector<AlgoAndScore>& algos_and_scores,
+    static int getOpponentIdx(size_t l, size_t k, size_t N);
+    static void runGameAndKeepScore(size_t l,  int opp, std::vector<AlgoAndScore>& algos_and_scores,
         size_t map_width,  size_t map_height, size_t max_steps, size_t num_shells,
         const std::string& map_name,
         const std::unique_ptr<SatelliteView>& map,

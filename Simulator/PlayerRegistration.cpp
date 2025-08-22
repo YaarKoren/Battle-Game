@@ -1,5 +1,3 @@
-#pragma once
-
 #include "../common/PlayerRegistration.h"
 #include "AlgorithmRegistrar.h"
 
