@@ -43,27 +43,31 @@ public:
 
 private:
     CmdArgsParser::CmdArgs args_;
+
+    //destructure args_ for convenience
     Mode mode_;
     bool verbose_;
     int threads_num_;
-
     //comparative mode
     std::string mapPath;
     std::string managersFolder;
     std::string algo1SO;
     std::string algo2SO;
-
     //competition mode
     std::string mapsFolder;
     std::string managerPath;
     std::string algosFolder;
 
 
-    void runComparative();          // non-static, uses args_
-    void runCompetitive();          // non-static, uses args_
+    void runComparative(std::ostringstream& oss) const;
+    void runCompetitive(std::ostringstream& oss) const;
+
+    //general helper functions
+    void parse_map(std::ostringstream& oss, std::string& map_name, size_t& map_width, size_t& map_height, size_t& max_steps, size_t& num_shells,
+                   std::unique_ptr<SatelliteView>& map) const;
 
 
-    //so files loading - helper functions
+    //general helper functions - so files loading
     static std::string getCleanFileName(const std::string& path);
     static size_t loadAlgoAndPlayerAndGetIndex(const std::string& so_path,
         std::vector<std::unique_ptr<SharedLib>>& open_libs);
@@ -72,7 +76,16 @@ private:
     static std::vector<std::string> getSoFilesList(const std::string& dir_path);
 
 
-    //competition mode - helper functions
+
+    //comparative mode helper functions - so files loading
+    void load_and_validate_comparative(std::unique_ptr<Player>& player1, std::unique_ptr<Player>& player2,
+                                           TankAlgorithmFactory& p1_algo_factory, TankAlgorithmFactory& p2_algo_factory,
+                                           size_t map_width, size_t map_height, size_t max_steps, size_t num_shells) const;
+
+    void load_and_validate_comparative(std::ostringstream& oss, std::vector<size_t>& indices) const;
+
+
+    //competition mode  helper functions
     static std::vector<std::string> getFilesList(const std::string& dir_path);
     static int MySimulator::getOpponentIdx(int l, int k, size_t N);
     static void runGameAndKeepScore(int l,  int opp, std::vector<AlgoAndScore> algos_and_scores,

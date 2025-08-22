@@ -1,6 +1,9 @@
 //written with help of ChatGPT 5
 
 #include "MySimulator.h"
+
+#include <scoped_allocator>
+
 #include "ErrorMsg.h"
 
 
@@ -69,48 +72,37 @@ int main(int argc, char* argv[]) {
 
 int MySimulator::run() //int cuz we want the program to always finish gracefully through main, so check for success.
 {
-
-
     // a string buffer, to build the input_errors file (for the recoverable errors in map + .so file)
     std::ostringstream oss;
 
-
-
-    //TODO: separate the run to (1) read input files, then create errors_file or print error and finish
-    //TODO:                    (2) run games
-
-
-    //pass oss
-
-    //catch (const std::exception& e)
-    //ErrorMsg: error_and_usage(*e.what);
-    //return 1;
-
-
-    // oss << *e.what();
-
+    //TODO: separate the run to (1) read input files, then create errors_file or print error and finish (2) run games
+    //TODO: pros: make sense, no need to pass oss, multi threading only in the run part
+    //TODO: cons: I need all the params from the reading, in the running function
 
     if (args_.mode_ == Mode::Comparative) {
-        try
-        {
-            MySimulator::runComparative();
-
+        try {
+           runComparative(oss);
+        } catch (const std::exception& e) {
+            ErrorMsg::error_and_usage(e.what()); //msg to screen on input file (map/so file) fatal errors
+            return 1;
         }
-        catch (...)
-        {
+            catch (...) {
+            std::cout << "Unknown error\n";
             return 1;
         }
     }
     if (args_.mode_ == Mode::Competitive) {
         try {
-            MySimulator::runCompetitive();
+            runCompetitive(oss);
+        } catch (const std::exception& e) {
+            ErrorMsg::error_and_usage(e.what()); //msg to screen on input file (map/so file) fatal errors
+            return 1;
         }
-        catch (...)
-        {
+        catch (...) {
+            std::cout << "Unknown error\n";
             return 1;
         }
     }
-
 
     //print input_errors to a file / to the screen
     std::string errors_input_content = oss.str();
@@ -130,122 +122,36 @@ int MySimulator::run() //int cuz we want the program to always finish gracefully
     return 0;
 }
 
-void MySimulator::runComparative() {
 
-
+void MySimulator::runComparative(std::ostringstream& oss) const {
     // --- 0) Load the map snapshot and params from map file
-
-    MapParser::MapArgs map_args;
-
-    try
-    {
-        MapParser mapParser
-        ;map_args = mapParser.parse(mapPath);
-    }
-    catch (const std::exception& e)
-    {
-        ErrorMsg::error_and_usage("could not parse map: " + *e.what());
-    }
-
-    //throws error on bad args; catch - should print msg and exit on bad args
-    std::string map_name = map_args.map_name_;
-    size_t map_width = map_args.map_width_;
-    size_t map_height = map_args.map_height_;
-    size_t max_steps = map_args.max_steps_;
-    size_t num_shells = map_args.num_shells_;
-
-    std::unique_ptr<SatelliteView> map = std::move(map_args.map_);
-
+    std::string map_name;
+    size_t map_width;
+    size_t map_height;
+    size_t max_steps;
+    size_t num_shells ;
+    std::unique_ptr<SatelliteView> map;parse_map(oss, map_name,
+        map_width, map_height, max_steps, num_shells, map); //throws an error on bad map data
 
     // --- 1) dlopen algorithm .so files (auto-registration happens here) ---
-    // TODO make it a func
-    std::vector<std::unique_ptr<SharedLib>> algo_libs; // TankAlgo+Player .so handles
-                                                        // Keep SO handles alive for the entire match (RAII)
-    algo_libs.reserve(2);
-
-    size_t idx1, idx2;
-
-    //load and validate
-    try
-    {
-        idx1 = loadAlgoAndPlayerAndGetIndex(algo1SO, algo_libs);
-    }
-    catch (const std::exception& e)
-    {
-        ErrorMsg::error_and_usage(e.what());
-    }
-
-   try
-   {
-       idx2 = loadAlgoAndPlayerAndGetIndex(algo2SO, algo_libs);
-   }
-    catch (const std::exception& e)
-    {
-        ErrorMsg::error_and_usage(e.what());
-    }
-
-    //Grab the two entries (we only need them by iterator; no private types leak)
-    //it1, it2 are std::vector<AlgorithmAndPlayerFactories>::const_iterator.
-    //after advancing, "it1" is like writing: algoReg.algorithms[idx1] (not exactly, but kind of)
-    const auto& algoReg = AlgorithmRegistrar::getAlgorithmRegistrar();
-    auto it1 = algoReg.begin(); std::advance(it1, static_cast<long>(idx1));
-    auto it2 = algoReg.begin(); std::advance(it2, static_cast<long>(idx2));
-
-    //Create Player instances for each side using the registered factories
-    //The constructor signature is fixed by the mandatory interface.
-    std::unique_ptr<Player> player1 = it1->createPlayer(/*player_index=*/1,
-        map_width, map_height, max_steps, num_shells);
-    std::unique_ptr<Player> player2 = it2->createPlayer(/*player_index=*/2,
-        map_width, map_height, max_steps, num_shells);
-
-    //Build TankAlgorithmFactory callables that delegate to the registrar entries
-    //(We don’t need to fetch the raw factory object; no dlsym needed.)
-    TankAlgorithmFactory p1_algo_factory = [it1](int player_index, int tank_index) {
-        return it1->createTankAlgorithm(player_index, tank_index);
-    };
-    TankAlgorithmFactory p2_algo_factory = [it2](int player_index, int tank_index) {
-        return it2->createTankAlgorithm(player_index, tank_index);
-    };
+    std::unique_ptr<Player> player1;
+    std::unique_ptr<Player> player2;
+    TankAlgorithmFactory p1_algo_factory;
+    TankAlgorithmFactory p2_algo_factory;
+    load_and_validate_comparative(player1, player2, p1_algo_factory, p2_algo_factory,
+                                map_width, map_height, max_steps, num_shells); //throws an error on failure to load/registrate
+                                                                               //no need to pass oss, cuz can't have recoverable errors here
 
     // --- 2) dlopen all GameManager .so files from folder (auto-register) ---
-    // TODO make it a func
-
-    //get so files from folder
-    std::vector<std::string> gm_so_paths = getSoFilesList(managersFolder);
-    if (gm_so_paths.empty())
-        throw std::runtime_error("No .so files in Game Managers dir:  " + managersFolder);
-        //TODO: return? throw?
-    size_t gm_so_paths_num = gm_so_paths.size();
-
-    //load and validate
-    std::vector<std::unique_ptr<SharedLib>> GM_libs; // TankAlgo+Player .so handles
-                                                    // Keep SO handles alive for the entire match (RAII)
-    GM_libs.reserve(gm_so_paths_num);
-
-    std::vector<size_t> idxs;
-    for (const auto& so : gm_so_paths) {
-        try
-        {
-            size_t idx = loadGameManagerAndGetIndex(so, GM_libs);
-            idxs.push_back(idx);
-        }
-        catch (const std::exception& e)
-        {
-            //TODO: figure what they want us to do with the info that one file failed
-            std::cerr << "Error: " << e.what() << "\n\n";
-        }
-    }
-
-    size_t gm_num = idxs.size();
-    if (gm_num == 0) ErrorMsg::error_and_usage("All .so files in Game Managers dir: " + managersFolder + "could not be loaded\n");
-
+    std::vector<size_t> indices;
+    load_and_validate_comparative(oss, indices);
 
     // --- 3) Run each newly registered GameManager on the single map with both algos ---
     const auto& GMReg = GameManagerRegistrar::getGameManagerRegistrar();
 
     std::vector<GMNameAndResult> name_and_results;
 
-    for (size_t idx : idxs)
+    for (size_t idx : indices)
     {
         auto it = GMReg.begin(); std::advance(it, static_cast<long>(idx));
         //get the GM name
@@ -274,7 +180,7 @@ void MySimulator::runComparative() {
 
 
 
-void MySimulator::runCompetitive() {
+void MySimulator::runCompetitive(std::ostringstream& oss) const {
     // --- 0) dlopen Game Manager .so file (auto-registration happens here) ---
     //TODO: maybe improve this (We need only one, no need of vector) and make it a func
 
@@ -664,6 +570,90 @@ void MySimulator::runGameAndKeepScore(const int l, const int opp, std::vector<Al
     }
 
 
+}
+
+void MySimulator::parse_map(std::ostringstream& oss, std::string& map_name,
+    size_t& map_width, size_t& map_height, size_t& max_steps, size_t& num_shells,
+    std::unique_ptr<SatelliteView>& map) const
+{
+    MapParser mapParser;
+    //TODO: add recoverable errors to oss (add this also to Map Parser)
+    auto map_args = mapParser.parse(mapPath); //throws an error on bad map data
+
+    map_name = map_args.map_name_;
+    map_width = map_args.map_width_;
+    map_height = map_args.map_height_;
+    max_steps = map_args.max_steps_;
+    num_shells = map_args.num_shells_;
+    map = std::move(map_args.map_);
+}
+
+//no need of std::ostringstream& oss, cuz can't have recoverable errors here
+void MySimulator::load_and_validate_comparative(std::unique_ptr<Player>& player1,  std::unique_ptr<Player>&player2,
+      TankAlgorithmFactory& p1_algo_factory,  TankAlgorithmFactory& p2_algo_factory,
+       const size_t map_width, const size_t map_height, const size_t max_steps, const size_t num_shells) const
+{
+    std::vector<std::unique_ptr<SharedLib>> algo_libs; // TankAlgo+Player .so handles
+    // Keep SO handles alive for the entire match (RAII)
+    algo_libs.reserve(2);
+
+
+    const size_t idx1 = loadAlgoAndPlayerAndGetIndex(algo1SO, algo_libs); //throws an error on failure to load/registrate
+    const size_t idx2 = loadAlgoAndPlayerAndGetIndex(algo2SO, algo_libs); //throws an error on failure to load/registrate
+
+    //Grab the two entries (we only need them by iterator; no private types leak)
+    //it1, it2 are std::vector<AlgorithmAndPlayerFactories>::const_iterator.
+    //after advancing, "it1" is like writing: algoReg.algorithms[idx1] (not exactly, but kind of)
+    const auto& algoReg = AlgorithmRegistrar::getAlgorithmRegistrar();
+    auto it1 = algoReg.begin(); std::advance(it1, static_cast<long>(idx1));
+    auto it2 = algoReg.begin(); std::advance(it2, static_cast<long>(idx2));
+
+    //Create Player instances for each side using the registered factories
+    //The constructor signature is fixed by the mandatory interface
+    player1 = it1->createPlayer(/*player_index=*/1,
+        map_width, map_height, max_steps, num_shells);
+    player2 = it2->createPlayer(/*player_index=*/2,
+        map_width, map_height, max_steps, num_shells);
+
+    //Build TankAlgorithmFactory callables that delegate to the registrar entries
+    //(We don’t need to fetch the raw factory object; no dlsym needed.)
+    p1_algo_factory = [it1](int player_index, int tank_index) {
+        return it1->createTankAlgorithm(player_index, tank_index);
+    };
+    p2_algo_factory = [it2](int player_index, int tank_index) {
+        return it2->createTankAlgorithm(player_index, tank_index);
+    };
+}
+
+void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::vector<size_t>& indices) const
+{
+    //get so files from folder
+    std::vector<std::string> gm_so_paths = getSoFilesList(managersFolder);
+    if (gm_so_paths.empty()) {
+        throw std::runtime_error("No .so files in Game Managers dir:  " + managersFolder);
+    }
+
+    const size_t gm_so_paths_num = gm_so_paths.size();
+
+    //load and validate
+    std::vector<std::unique_ptr<SharedLib>> GM_libs; // TankAlgo+Player .so handles
+    // Keep SO handles alive for the entire match (RAII)
+
+    GM_libs.reserve(gm_so_paths_num);
+    for (const auto& so : gm_so_paths) {
+        try {
+            size_t idx = loadGameManagerAndGetIndex(so, GM_libs);
+            indices.push_back(idx);
+        } catch (const std::exception& e) {
+            //add to oss (=input_errors file) the info about the error; it includes the file path (see implementation of SharedLib)
+            oss << "Error in Game Manger .so file: " << e.what() << "\n\n";
+        }
+    }
+
+    size_t gm_num = indices.size();
+    if (gm_num == 0) {
+        throw std::runtime_error ("All .so files in Game Managers dir: " + managersFolder + "could not be loaded");
+    }
 }
 
 
