@@ -153,7 +153,7 @@ void MySimulator::runComparative(std::ostringstream& oss) const {
     std::vector<GMNameAndResult> GMs_and_results;
     for (auto GM_and_name : GMs)
     {
-        std::string name = GM_and_name.name;
+        const std::string name = GM_and_name.name;
         //run game
         GameResult game_result = GM_and_name.GM->run(
                 map_width, map_height, *map, map_name,
@@ -181,79 +181,18 @@ void MySimulator::runCompetitive(std::ostringstream& oss) const {
                                      //no need to pass oss, cuz can't have recoverable errors here
 
 
-    // --- 2) dlopen all Algorithm .so files from folder (auto-register) ---
-    std::vector<size_t> indices;
-    load_and_validate_competition(oss, indices); //throws an error on failure to open file / load / registrate / empty folder / less than 2 algos
-
-    size_t N = indices.size(); //number of successfully loaded algos, that are going to play
-    if (N == 0) {
-        throw std::runtime_error ("All .so files in the algorithms folder: " + algosFolder + "could not be loaded");
-    } else if (N == 1) {
-        throw std::runtime_error ("Only one .so file in the algorithms folder: " + algosFolder + " could be loaded");
-    }
-
-    //create a vector of AlgoAndScore struct
-    //each vector entry holds an AlgoAndScore for a different so file loaded successfully
-    //struct holds: name + player factory + tank algorithm factory + points
+    // --- 1) dlopen all Algorithm .so files from folder (auto-register) ---
     std::vector<AlgoAndScore> algos_and_scores;
-    algos_and_scores.reserve(N);
-    const auto& algoReg = AlgorithmRegistrar::getAlgorithmRegistrar();
-    for (int i = 0; i < N; ++i)
-    {
-        auto iter = algoReg.begin(); std::advance(iter, static_cast<long>(indices[i]));
+    load_and_validate_competition(oss, algos_and_scores); //throws an error on failure to open file / load / registrate / empty folder / less than 2 algos
+    const size_t N = algos_and_scores.size(); //N>=2 , was validated in the function above
 
-        //get algo name and keep it
-        algos_and_scores[i].name = getCleanFileName(iter->name());
-
-        //create and keep Player Factory
-        algos_and_scores[i].player_factory =
-            [iter](int player_index, size_t x, size_t y, size_t max_steps, size_t num_shells)
-            {
-                return iter->createPlayer(player_index, x, y, max_steps, num_shells);
-            };
-
-        //create and keep Algorithm Factory
-        algos_and_scores[i].algo_factory =
-            [iter](int player_index, int tank_index)
-            {
-                return iter->createTankAlgorithm(player_index, tank_index);
-            };
-    }
-
-    // ---3) for each given map, read map, and keep its MapArgs in a vector
-    MapParser map_parser;
-    const std::vector<std::string> maps_paths = getFilesList(mapsFolder);
-    const size_t maps_num = maps_paths.size();
-
-    if (maps_num == 0) {
-        throw std::runtime_error ("There are no no maps file in the maps folder: " + mapsFolder);
-    }
-
+    // ---2) for each given map, read map, and keep its MapArgs in a vector
     std::vector<MapParser::MapArgs> maps_data;
+    read_maps(oss, maps_data); //throws an error on failure to open file / empty file / bad map data
+    size_t K = maps_data.size(); //K > 0, was validated in the function above
 
-    for (int i = 0; i < maps_num; ++i)
-    {
-        //try to read and catch errors
-        try
-        {
-            maps_data.push_back(map_parser.parse(maps_paths[i]));
-        }
 
-        catch (const std::exception& e)
-        {
-            //add to oss (=input_errors file) the info about the error
-            oss << "Error: in the map file: " + mapPath + ":\n " << e.what() << "\n\n";
-        }
-    }
-
-    size_t K = maps_data.size(); //number of maps successfully read
-
-    if (K == 0) { // no maps were read successfully
-
-        throw std::runtime_error ("No maps were read successfully from the maps folder: " + mapsFolder);
-    }
-
-    // --- 4) for each read map, run games of the N algos on this map, and keep the results
+    // --- 3) for each read map, run games of the N algos on this map, and keep the results
 
     //prepare variable for the nested loop
     std::string map_name;
@@ -304,7 +243,7 @@ void MySimulator::runCompetitive(std::ostringstream& oss) const {
 
     }
 
-    // --- 5) format results and print them to the output file / screen ---
+    // --- 4) format results and print them to the output file / screen ---
     //make parameters for the printing function
     std::string game_manager_name = getCleanFileName(managerPath);
     //make a vector of algos and scores (no factories) to pass to the printing function
@@ -587,7 +526,7 @@ int MySimulator::getOpponentIdx(const int l, const int k, const size_t N)
 
 
 
-void MySimulator::runGameAndKeepScore(const int l, const int opp, std::vector<AlgoAndScore> algos_and_scores,
+void MySimulator::runGameAndKeepScore(const int l, const int opp, std::vector<AlgoAndScore>& algos_and_scores,
     const size_t map_width, const size_t map_height, const size_t max_steps, const size_t num_shells,
     const std::string& map_name,
     const std::unique_ptr<SatelliteView>& map,
@@ -648,8 +587,10 @@ void MySimulator::load_and_validate_competition(std::unique_ptr<AbstractGameMana
     GM = it->createGameManager(verbose_);
 }
 
-void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::vector<size_t>& indices) const
+void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::vector<AlgoAndScore>& algos_and_scores) const
 {
+    std::vector<size_t> indices;
+
     //get so files from folder
     std::vector<std::string> algos_so_paths = getSoFilesList(algosFolder);
     if (algos_so_paths.empty()) {
@@ -665,7 +606,6 @@ void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::ve
     // Keep SO handles alive for the entire match (RAII)
     algos_libs.reserve(algos_so_paths_num);
 
-
     for (const auto& so : algos_so_paths) {
         try
         {
@@ -678,6 +618,74 @@ void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::ve
             oss << "Error in Game Manger .so file: " << e.what() << "\n\n";
         }
     }
+
+    const size_t N = indices.size(); //number of successfully loaded algos, that are going to play
+    if (N == 0) {
+        throw std::runtime_error ("All .so files in the algorithms folder: " + algosFolder + "could not be loaded");
+    } else if (N == 1) {
+        throw std::runtime_error ("Only one .so file in the algorithms folder: " + algosFolder + " could be loaded");
+    }
+
+    //algos_and_scores - each vector entry holds an AlgoAndScore for a different so file loaded successfully
+    //struct holds: name + player factory + tank algorithm factory + points
+    algos_and_scores.reserve(N);
+    const auto& algoReg = AlgorithmRegistrar::getAlgorithmRegistrar();
+    for (int i = 0; i < N; ++i)
+    {
+        auto iter = algoReg.begin(); std::advance(iter, static_cast<long>(indices[i]));
+
+        //get algo name and keep it
+        algos_and_scores[i].name = getCleanFileName(iter->name());
+
+        //create and keep Player Factory
+        algos_and_scores[i].player_factory =
+            [iter](int player_index, size_t x, size_t y, size_t max_steps, size_t num_shells)
+            {
+                return iter->createPlayer(player_index, x, y, max_steps, num_shells);
+            };
+
+        //create and keep Algorithm Factory
+        algos_and_scores[i].algo_factory =
+            [iter](int player_index, int tank_index)
+            {
+                return iter->createTankAlgorithm(player_index, tank_index);
+            };
+
+        //initialize score as 0
+        algos_and_scores[i].score = 0;
+    }
 }
 
+void MySimulator::read_maps(std::ostringstream& oss, std::vector<MapParser::MapArgs>& maps_data) const
+{
+    MapParser map_parser;
+    const std::vector<std::string> maps_paths = getFilesList(mapsFolder);
+    const size_t maps_num = maps_paths.size();
 
+    if (maps_num == 0) {
+        throw std::runtime_error ("There are no no maps file in the maps folder: " + mapsFolder);
+    }
+
+    for (int i = 0; i < maps_num; ++i)
+    {
+        //try to read and catch errors
+        try
+        {
+            maps_data.push_back(map_parser.parse(maps_paths[i]));
+        }
+
+        catch (const std::exception& e)
+        {
+            //add to oss (=input_errors file) the info about the error
+            oss << "Error: in the map file: " + mapPath + ":\n " << e.what() << "\n\n";
+        }
+    }
+
+    size_t K = maps_data.size(); //number of maps successfully read
+
+    if (K == 0) { // no maps were read successfully
+
+        throw std::runtime_error ("No maps were read successfully from the maps folder: " + mapsFolder);
+    }
+
+}
