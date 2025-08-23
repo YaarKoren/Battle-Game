@@ -40,7 +40,7 @@ MySimulator::MySimulator(CmdArgsParser::CmdArgs args)
 }
 
 int main(int argc, char* argv[]) {
-  std::cout << "1..2.. test\n";
+  //std::cout << "1..2.. test\n";
 
    //---0) parse cmd args
    std::optional<decltype(CmdArgsParser::parse(argc, argv))> args;
@@ -55,13 +55,13 @@ int main(int argc, char* argv[]) {
       return 1;
   }
 
-    //---1)run the simulaion
+    //---1) run the simulaion
   MySimulator sim(std::move(*args));
   try {
-    const int rc = sim.run();   // no exit()
+    const int rc = sim.run();   // no exit(); the run() function catches errors (and on case of error, print error msg and returns 1)
     //TODO: maybe add printing to screen if run failed or succeeded
     return rc;                  //0- success, 1-fail
-  } catch (const std::exception& e) {
+  } catch (const std::exception& e) { //for catching errors not caught by run() itself
     std::cerr << "Fatal error: " << e.what() << "\n";
     return 2; // non-zero so shell knows it failed
   } catch (...) {                     //general catch block for safety
@@ -106,17 +106,16 @@ int MySimulator::run() //int cuz we want the program to always finish gracefully
 
     //print input_errors to a file / to the screen
     std::string errors_input_content = oss.str();
-
     if (!errors_input_content.empty()) { //specs: "Create this file only if there are errors"
-    //choose destination for the errors_input
-    const std::string out_path = "input_errors.txt"; // in working directory (according to forum's specs)
-    std::ofstream out(out_path);
-    if (!out) {
-        std::cerr << "ERROR: cannot create output file: " << out_path
-                  << " — printing results to screen instead.\n";
-        std::cout << errors_input_content;
-    }
-    out << errors_input_content;
+        //choose destination for the errors_input
+        const std::string out_path = "input_errors.txt"; // in working directory (according to forum's specs)
+        std::ofstream out(out_path);
+        if (!out) {
+            std::cerr << "ERROR: cannot create output file: " << out_path
+                      << " — printing results to screen instead.\n";
+            std::cout << errors_input_content;
+        }
+        out << errors_input_content;
     }
 
     return 0;
@@ -262,10 +261,8 @@ void MySimulator::parse_map(std::ostringstream& oss, std::string& map_name,
     size_t& map_width, size_t& map_height, size_t& max_steps, size_t& num_shells,
     std::unique_ptr<SatelliteView>& map) const
 {
-    MapParser mapParser;
-    auto map_args = mapParser.parse(mapPath); //throws an error on bad map data
-    //TODO: add recoverable errors to oss (add this also to Map Parser)
-    (void)oss; // silence if truly unused
+
+    auto map_args = MapParser::parse(mapPath, oss); //throws an error on bad map data
 
     map_name = map_args.map_name_;
     map_width = map_args.map_width_;
@@ -659,7 +656,6 @@ void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::ve
 
 void MySimulator::read_maps(std::ostringstream& oss, std::vector<MapParser::MapArgs>& maps_data) const
 {
-    MapParser map_parser;
     const std::vector<std::string> maps_paths = getFilesList(mapsFolder);
     const size_t maps_num = maps_paths.size();
 
@@ -672,13 +668,13 @@ void MySimulator::read_maps(std::ostringstream& oss, std::vector<MapParser::MapA
         //try to read and catch errors
         try
         {
-            maps_data.push_back(map_parser.parse(maps_paths[i]));
+            maps_data.push_back(MapParser::parse(maps_paths[i], oss)); //recoverable errors in the map is written to oss
         }
 
         catch (const std::exception& e)
         {
-            //add to oss (=input_errors file) the info about the error
-            oss << "Error: in the map file: " + mapPath + ":\n " << e.what() << "\n\n";
+            //map that had unrecoverable error - we document the error in oss and don't add it to the maps vector
+            oss << "Unrecoverable error in map file: " + mapPath + ":\n " << e.what() << "\n\n";
         }
     }
 
