@@ -1,7 +1,6 @@
 # ===== Simulator/Makefile =====
 IDS        := 207177197_301251571
-TARGET_DIR := bin
-TARGET     := $(TARGET_DIR)/simulator_$(IDS)
+TARGET     := simulator_$(IDS)  # create the executable directly in the Simulator folder
 
 CXX      ?= g++-11
 CPPFLAGS := -I. -I../common -I../UserCommon   # headers go in CPPFLAGS
