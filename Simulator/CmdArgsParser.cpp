@@ -37,9 +37,10 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
 
       const std::vector<std::string> kvPrefixes = {
           "num_threads=",
-          "game_maps_folder=",
-          "game_manager=",
-          "algorithms_folder=",
+          "game_map=",
+          "game_managers_folder=",
+          "algorithm1=",
+          "algorithm2="
       };
 
       // After parsing, verify no extras
@@ -67,10 +68,9 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
 
       const std::vector<std::string> kvPrefixes = {
           "num_threads=",
-          "game_map_=",
-          "game_managers_folder=",
-          "algorithm1=",
-          "algorithm2="
+          "game_maps_folder=",
+          "game_manager=",
+          "algorithms_folder=",
       };
 
       // After parsing, verify no extras
@@ -87,9 +87,12 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
   try {
     if (auto val = getFlagValue(argc, argv, "num_threads")) { //if not, no flag, we don't change threads_num_
       if (std::all_of(val->begin(), val->end(), ::isdigit)){ //if it's an integer
-        if (std::stoi(*val) >= 2) { //if its 1 we don't change
-            args.threads_num_ += std::stoi(*val);
-        }
+          int n = std::stoi(*val);
+          if (n == 1) {
+              args.threads_num_ = 1; // still just main
+          } else if (n >= 2) {
+              args.threads_num_ = n + 1; // main + n workers
+          }
       }
       else { //flag's value exist, but illegal
           missing_args.emplace_back("Illegal argument: num_threads value must be a positive integer");

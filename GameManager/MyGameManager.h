@@ -23,9 +23,10 @@
 #include "../UserCommon/Mine.h"
 #include "../UserCommon/Wall.h"
 #include "../UserCommon/Shell.h"
-#include "../UserCommon/MyBattleInfo.h"
-#include "../UserCommon/SatelliteViewImpl.h"
-#include "../UserCommon/UserCommonNamespace.h"
+#include "../UserCommon/MyBattleInfo.h" //TODO: or the abstruct?
+#include "../UserCommon/SatelliteViewImpl.h"   //TODO: or the abstruct?cd ..
+
+
 
 namespace GameManager_207177197_301251571 {
 

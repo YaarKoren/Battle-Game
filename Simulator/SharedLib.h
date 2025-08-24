@@ -14,7 +14,7 @@ struct SharedLib {
     explicit SharedLib(const std::string& path) {
         handle = dlopen(path.c_str(), RTLD_NOW);
         if (!handle) {
-            throw std::runtime_error("[dlopen] " + path + " : " + dlerror());
+            throw std::runtime_error(std::string("[dlopen] ") + path + std::string(" : ") + dlerror());
         }
     }
     ~SharedLib() { if (handle) dlclose(handle); }

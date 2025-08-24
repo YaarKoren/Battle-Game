@@ -321,7 +321,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
         open_libs.emplace_back(std::make_unique<SharedLib>(so_path));
     } catch (const std::exception& e) {
         reg.removeLast(); // rollback empty slot
-        throw std::runtime_error("Failed to open Algorithm .so file\n" + *e.what());  // with the dlopen error text
+        throw std::runtime_error(std::string("Failed to open Algorithm .so file\n") + e.what());  // with the dlopen error text
     }
 
     // Validate that both factories were provided by the .so
@@ -333,7 +333,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
         if (!bad.hasName) msg += " missing name;"; //should not happen; if path argument is missing in cmd args, we catch it before
         if (!bad.hasPlayerFactory) msg += " missing Player factory;";
         if (!bad.hasTankAlgorithmFactory) msg += " missing TankAlgorithm factory;";
-         throw std::runtime_error("Failed to Register Algorithm .so file: " + msg);
+         throw std::runtime_error(std::string("Failed to Register Algorithm .so file: ") + msg);
     }
 
     // Return the index of the newly validated entry (last)
@@ -369,7 +369,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
         open_libs.emplace_back(std::make_unique<SharedLib>(so_path));
     } catch (const std::exception& e) {
         reg.removeLast(); // rollback empty slot
-        throw std::runtime_error ("Failed to open Game Manager .so file\n" + *e.what());  // with the dlopen error text
+        throw std::runtime_error (std::string("Failed to open Game Manager .so file\n") + e.what());  // with the dlopen error text
     }
 
     // Validate that factory was provided by the .so
@@ -380,7 +380,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
         std::string msg = "Bad registration in '" + bad.name + "':";
         if (!bad.hasName) msg += " missing name;"; //should not happen; if path argument is missing in cmd args, we catch it before
         if (!bad.hasGMFactory) msg += " missing Game Manager factory;";
-        throw std::runtime_error ("Failed to Register Algorithm .so file: " + msg);
+        throw std::runtime_error (std::string("Failed to Register Algorithm .so file: ") + msg);
     }
 
     // Return the index of the newly validated entry (last)
@@ -444,7 +444,7 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
     //get so files from folder
     std::vector<std::string> gm_so_paths = getSoFilesList(managersFolder);
     if (gm_so_paths.empty()) {
-        throw std::runtime_error("No .so files in Game Managers dir:  " + managersFolder);
+        throw std::runtime_error(std::string("No .so files in Game Managers dir:  ") + managersFolder);
     }
 
     const size_t gm_so_paths_num = gm_so_paths.size();
@@ -463,13 +463,13 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
             indices.push_back(idx);
         } catch (const std::exception& e) {
             //add to oss (=input_errors file) the info about the error; it includes the file path (see implementation of SharedLib)
-            oss << "Error in Game Manger .so file: " << e.what() << "\n\n";
+            oss << "Error in Game Manger .so file:\n" << e.what() << "\n\n";
         }
     }
 
     size_t gm_num = indices.size();
     if (gm_num == 0) {
-        throw std::runtime_error ("All .so files in Game Managers dir: " + managersFolder + "could not be loaded");
+        throw std::runtime_error (std::string("All .so files in Game Managers dir: ") + managersFolder + std::string("could not be loaded"));
     }
 
     //for each .so file, create GM and keep it and its name in the vector
@@ -592,11 +592,11 @@ void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::ve
     //get so files from folder
     std::vector<std::string> algos_so_paths = getSoFilesList(algosFolder);
     if (algos_so_paths.empty()) {
-        throw std::runtime_error("No .so files in Algorithms dir:  " + algosFolder);
+        throw std::runtime_error((std::string("No .so files in algorithms dir: ") + algosFolder));
     }
     size_t algos_so_paths_num = algos_so_paths.size();
     if (algos_so_paths_num < 2) {
-        throw std::runtime_error("There are less than 2 algorithm .so files in the algorithms folder: " + algosFolder);
+        throw std::runtime_error(std::string("There are less than 2 algorithm .so files in the algorithms folder: ") + algosFolder);
     }
 
     //load and validate
@@ -613,15 +613,15 @@ void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::ve
         catch (const std::exception& e)
         {
             //add to oss (=input_errors file) the info about the error; it includes the file path (see implementation of SharedLib)
-            oss << "Error in Game Manger .so file: " << e.what() << "\n\n";
+            oss << "Error in Game Manger .so file:\n" << e.what() << "\n\n";
         }
     }
 
     const size_t N = indices.size(); //number of successfully loaded algos, that are going to play
     if (N == 0) {
-        throw std::runtime_error ("All .so files in the algorithms folder: " + algosFolder + "could not be loaded");
+        throw std::runtime_error (std::string("All .so files in the algorithms folder: ") + algosFolder + std::string("could not be loaded"));
     } else if (N == 1) {
-        throw std::runtime_error ("Only one .so file in the algorithms folder: " + algosFolder + " could be loaded");
+        throw std::runtime_error (std::string("Only one .so file in the algorithms folder: ") + algosFolder + std::string(" could be loaded"));
     }
 
     //algos_and_scores - each vector entry holds an AlgoAndScore for a different so file loaded successfully
@@ -660,7 +660,7 @@ void MySimulator::read_maps(std::ostringstream& oss, std::vector<MapParser::MapA
     const size_t maps_num = maps_paths.size();
 
     if (maps_num == 0) {
-        throw std::runtime_error ("There are no no maps file in the maps folder: " + mapsFolder);
+        throw std::runtime_error (std::string("There are no no maps file in the maps folder: ") + mapsFolder);
     }
 
     for (size_t i = 0; i < maps_num; ++i)
@@ -674,7 +674,7 @@ void MySimulator::read_maps(std::ostringstream& oss, std::vector<MapParser::MapA
         catch (const std::exception& e)
         {
             //map that had unrecoverable error - we document the error in oss and don't add it to the maps vector
-            oss << "Unrecoverable error in map file: " + mapPath + ":\n " << e.what() << "\n\n";
+            oss << "Unrecoverable error in map file:\n" << mapPath << ":\n " << e.what() << "\n\n";
         }
     }
 
@@ -682,7 +682,7 @@ void MySimulator::read_maps(std::ostringstream& oss, std::vector<MapParser::MapA
 
     if (K == 0) { // no maps were read successfully
 
-        throw std::runtime_error ("No maps were read successfully from the maps folder: " + mapsFolder);
+        throw std::runtime_error (std::string("No maps were read successfully from the maps folder: ") + mapsFolder);
     }
 
 }

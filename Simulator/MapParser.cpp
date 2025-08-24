@@ -14,12 +14,12 @@ namespace fs = std::filesystem;
 MapParser::MapArgs MapParser::parse(const std::string& filename, std::ostringstream& oss)
 {
     if (!fs::exists(filename)) {
-      throw std::runtime_error("Map file not found: " + filename);
+      throw std::runtime_error(std::string("Map file not found: ") + filename);
     }
 
     std::ifstream file(filename);
     if (!file.is_open()) {
-        throw std::runtime_error("Map file found but cannot be opened: " + filename);
+        throw std::runtime_error(std::string("Map file found but cannot be opened: ") + filename);
     }
 
     MapArgs args;
@@ -60,7 +60,7 @@ std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata
     const std::string& filename)
 {
     if (lines.size() < 5) {
-        throw std::runtime_error("Missing metadata lines in the map input file: " + filename);
+        throw std::runtime_error(std::string("Missing metadata lines in the map input file: ") + filename);
     }
 
     std::string map_name = lines[0];
@@ -78,7 +78,7 @@ std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata
 
         size_t eqPos = line.find('=');
         if (eqPos == std::string::npos) {
-            throw std::runtime_error("Malformed metadata line in the map input file: " + filename);
+            throw std::runtime_error(std::string("Malformed metadata line in the map input file: ") + filename);
         }
 
         std::string key = line.substr(0, eqPos);
@@ -88,11 +88,11 @@ std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata
         try {
             val = std::stoi(value);
         } catch (const std::exception&) {
-            throw std::runtime_error("Non-integer value in metadata line: " + line + "in the map input file: " + filename);
+            throw std::runtime_error(std::string("Non-integer value in metadata line: ") + line + std::string("in the map input file: ") + filename);
         }
 
         if (val < 0) {
-            throw std::runtime_error("Negative value in metadata line: " + line + "in the map input file: " + filename);
+            throw std::runtime_error(std::string("Negative value in metadata line: ") + line + std::string("in the map input file: ") + filename);
         }
 
         if (key == "MaxSteps")        max_steps  = static_cast<size_t>(val);
@@ -100,7 +100,7 @@ std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata
         else if (key == "Rows")       map_height = static_cast<size_t>(val);
         else if (key == "Cols")       map_width  = static_cast<size_t>(val);
         else {
-            throw std::runtime_error("Unknown metadata key: " + key + + "in the map input file: " + filename);
+            throw std::runtime_error(std::string("Unknown metadata key: ") + key + std::string("in the map input file: ") + filename);
         }
     }
 
