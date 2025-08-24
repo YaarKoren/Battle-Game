@@ -2,7 +2,7 @@
 
 #include "Board.h"
 
-USERCOMMON_BEGIN
+namespace UserCommon_207177197_301251571 {
 
 
 Board::Board(int w, int h) : width_(w), height_(h) {
@@ -61,4 +61,4 @@ void Board::removeObject(GameObject* objToRemove, Position pos) {
     );
 }
 
-USERCOMMON_END
+}

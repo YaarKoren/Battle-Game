@@ -1,14 +1,13 @@
 #pragma once
 
 #include "GameObject.h"
-#include "UserCommonNamespace.h"
 
-USERCOMMON_BEGIN
+namespace UserCommon_207177197_301251571
+{
+    class Mine : public GameObject {
+    public:
+        explicit Mine(Position pos) : GameObject(pos) {}
+        char getSymbol() const override { return '@'; }
+    };
 
-class Mine : public GameObject {
-public:
-    explicit Mine(Position pos) : GameObject(pos) {}
-    char getSymbol() const override { return '@'; }
-};
-
-USERCOMMON_END
+}

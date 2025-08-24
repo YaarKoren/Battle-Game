@@ -84,9 +84,6 @@ class GameResultPrinter {
 
 
 
-    //Competition Mode - helper functions
-
-
 
 };
 

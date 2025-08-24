@@ -3,21 +3,19 @@
 #include "MovingGameObject.h"
 #include "Position.h"
 #include "Direction.h"
-#include "UserCommonNamespace.h"
 
-USERCOMMON_BEGIN
+namespace UserCommon_207177197_301251571
+{
+    class Shell : public MovingGameObject {
+    public:
+        Shell(Position pos, Direction dir, int tankId);
 
-class Shell : public MovingGameObject {
-public:
-    Shell(Position pos, Direction dir, int tankId);
+        char getSymbol() const override { return '*'; }
+        int getTankId() const { return tankId_; }
 
-    char getSymbol() const override { return '*'; }
-    int getTankId() const { return tankId_; }
+        bool moveForward() override;
 
-    bool moveForward() override;
-
-private:
-    int tankId_ = 0;
-};
-
-USERCOMMON_END
+    private:
+        int tankId_ = 0;
+    };
+}

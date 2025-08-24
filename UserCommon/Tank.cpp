@@ -4,7 +4,8 @@
 
 #include "Tank.h"
 
-USERCOMMON_BEGIN
+namespace UserCommon_207177197_301251571 {
+
 
 Tank::Tank(Position pos, Direction dir, int playerId, int id)
     : MovingGameObject(pos, dir), playerId_(playerId), id_(id) {}
@@ -51,7 +52,7 @@ bool Tank::moveForward() {
 
 // MOVE BACKWARDS
 
-// moveBack() returns true if the action succeeds in changing state (e.g., entering to a backward wait state)
+// askToMoveBack() returns true if the action succeeds in changing state (e.g., entering to a backward wait state)
 // no physical movement occurs.
 // return false if did not succeed, cuz the tank is already in waiting state.
 // make sure game manager call this function only if isRightAfterMoveBack_ == false. If it's true, the tank can move
@@ -340,4 +341,4 @@ void Tank::setLastAction(ActionRequest action) {
     lastAction_ = action;
 }
 
-USERCOMMON_END
+}

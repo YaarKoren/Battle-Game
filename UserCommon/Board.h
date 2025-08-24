@@ -4,8 +4,8 @@
 #include <memory>
 #include "GameObject.h"
 #include "Position.h"
-#include "UserCommonNamespace.h"
-USERCOMMON_BEGIN
+
+namespace UserCommon_207177197_301251571 {
 
 class Board {
 private:
@@ -36,4 +36,4 @@ public:
 
 };
 
-USERCOMMON_END
+}
