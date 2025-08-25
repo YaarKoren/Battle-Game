@@ -1,20 +1,38 @@
 #include "MyBattleInfo.h"
+#include <exception>
 
 namespace UserCommon_207177197_301251571
 {
     MyBattleInfo::MyBattleInfo(const SatelliteView& view, int playerIndex, size_t rows,
-                               size_t cols, std::pair<size_t, size_t> selfPos)
-            : battlefield_(rows, std::vector<char>(cols, ' ')),
-              rows_(rows), cols_(cols),
-              playerIndex_(playerIndex),
-              selfPos_(selfPos) {
-
-        for (size_t y = 0; y < rows; ++y) {
-            for (size_t x = 0; x < cols; ++x) {
-                char obj = view.getObjectAt(x, y);
-                battlefield_[y][x] = (x == selfPos.first && y == selfPos.second) ? '%' : obj;
-            }
+                           size_t cols, std::pair<size_t, size_t> selfPos)
+        : battlefield_(rows, std::vector<char>(cols, ' ')),
+          rows_(rows), cols_(cols),
+          playerIndex_(playerIndex),
+          selfPos_(selfPos),
+          valid_(false)
+    {
+        // Basic sanity checks for rows/cols
+        if (rows_ == 0 || cols_ == 0) {
+            return; // invalid
         }
+
+        // Populate battlefield via SatelliteView::getObjectAt; guard exceptions
+        try {
+            for (size_t y = 0; y < rows_; ++y) {
+                for (size_t x = 0; x < cols_; ++x) {
+                    char obj = view.getObjectAt(x, y);
+                    battlefield_[y][x] = (x == selfPos_.first && y == selfPos_.second) ? '%' : obj;
+                }
+            }
+        } catch (const std::exception&) {
+            valid_ = false;
+            return;
+        } catch (...) {
+            valid_ = false;
+            return;
+        }
+
+        valid_ = true;
     }
 
     char MyBattleInfo::getObjectAt(size_t x, size_t y) const {
@@ -45,4 +63,9 @@ namespace UserCommon_207177197_301251571
 
         return (playerIndex_ == 1) ? Direction::Right : Direction::Left;
     }
+
+    bool MyBattleInfo::isValid() const {
+        return valid_;
+    }
+
 }

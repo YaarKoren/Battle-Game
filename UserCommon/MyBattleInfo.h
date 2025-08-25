@@ -24,11 +24,16 @@ namespace UserCommon_207177197_301251571
 
         Direction inferSelfDirection() const;
 
+        // New: check if this info is valid (for Player guards)
+        bool isValid() const;
+
     private:
         std::vector<std::vector<char>> battlefield_;
         size_t rows_;
         size_t cols_;
         int playerIndex_;
         std::pair<size_t, size_t> selfPos_;
+        bool valid_;
     };
+
 }

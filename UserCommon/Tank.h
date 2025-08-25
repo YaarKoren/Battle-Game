@@ -1,13 +1,17 @@
 #pragma once
 
 #include <memory>
+#include <vector>
+#include  <climits>  // for INT_MAX
 
-#include "GameObject.h"
+#include "../common/TankAlgorithm.h"
+#include "../common/ActionRequest.h"
+
 #include "MovingGameObject.h"
 #include "Position.h"
 #include "Direction.h"
-#include "../common/TankAlgorithm.h"
-#include "../common/ActionRequest.h"
+#include "Board.h"
+
 
 namespace UserCommon_207177197_301251571
 {
@@ -32,6 +36,7 @@ namespace UserCommon_207177197_301251571
         int getWaitToMoveBackCounter() const;
         ActionRequest getNextAction() const;
         ActionRequest getLastAction() const;
+        ActionRequest decideNextAction(const std::vector<Tank*>& allTanks); // Keep only this one
         TankAlgorithm* getAlgorithm() const;
         bool getIstRequestedBattleInfo() const; //not needed?
 
@@ -43,6 +48,7 @@ namespace UserCommon_207177197_301251571
         void setNextAction(ActionRequest action);
         void setLastAction(ActionRequest action);
 
+        void setBoard(Board* board);
 
         // Actions
         bool moveForward() override;
@@ -62,6 +68,15 @@ namespace UserCommon_207177197_301251571
         void resetIsWaitingToMoveBack();
         void resetIsRightAfterMoveBack();
 
+        // Decision making functions - CHANGE THESE TO USE POINTERS
+        bool canSeeEnemy(const std::vector<Tank*>& allTanks) const;
+        bool canMoveForward() const;
+        Direction getDirectionTowardEnemy(const std::vector<Tank*>& allTanks) const;
+
+        // Remove the duplicate declaration
+        // ActionRequest decideNextAction(const std::vector<Tank>& allTanks);
+
+
         //for creating the output file
         bool getWasKilledThisStep() const {return wasKilledThisStep_;}
         bool getWasLastActionIgnored() const {return wasLastActionIgnored;}
@@ -73,9 +88,11 @@ namespace UserCommon_207177197_301251571
         int playerId_ = 0;
         int id_ = 0;
 
+        Board* board_ = nullptr;
+
         std::unique_ptr<TankAlgorithm> algorithm_;
 
-        bool requestedBattleInfo_ = false; //not sure if neede
+        bool requestedBattleInfo_ = false; //not sure if needed
 
         //shells and shoot state
         int shellsLeft_ = SHELLS_NUMBER;

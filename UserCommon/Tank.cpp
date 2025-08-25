@@ -4,11 +4,206 @@
 
 #include "Tank.h"
 
+
 namespace UserCommon_207177197_301251571 {
 
 
 Tank::Tank(Position pos, Direction dir, int playerId, int id)
     : MovingGameObject(pos, dir), playerId_(playerId), id_(id) {}
+
+void Tank::setBoard(Board* board) {
+board_ = board;
+}
+
+// Intelligent decision making function
+ActionRequest Tank::decideNextAction(const std::vector<Tank*>& allTanks) {
+    if (!board_) {
+        return ActionRequest::DoNothing;
+    }
+
+    // 1. First priority: Shoot if enemy is in sight and not in cooldown
+    if (canSeeEnemy(allTanks) && !isWaitingAfterShoot_ && shellsLeft_ > 0) {
+        return ActionRequest::Shoot;
+    }
+
+    // 2. Try to move toward enemy if path is clear
+    if (canMoveForward() && !isWaitingToMoveBack_) {
+        return ActionRequest::MoveForward;
+    }
+
+    // 3. Rotate toward enemy if can't move
+    Direction targetDir = getDirectionTowardEnemy(allTanks);
+    if (targetDir != dir_ && !isWaitingToMoveBack_) {
+        // Choose the shortest rotation direction
+        int currentDirVal = static_cast<int>(dir_);
+        int targetDirVal = static_cast<int>(targetDir);
+        int diff = (targetDirVal - currentDirVal + 8) % 8;
+
+                if (diff <= 4) {
+                return ActionRequest::RotateRight90;
+            } else {
+                return ActionRequest::RotateLeft90;
+            }
+    }
+
+    // 4. Default action
+    return ActionRequest::DoNothing;
+}
+bool Tank::canSeeEnemy(const std::vector<Tank*>& allTanks) const {
+    if (!board_) return false;
+
+    int dx = 0, dy = 0;
+    switch (dir_) {
+        case Direction::Up: dy = -1; break;
+        case Direction::Down: dy = 1; break;
+        case Direction::Left: dx = -1; break;
+        case Direction::Right: dx = 1; break;
+        case Direction::UpLeft: dx = -1; dy = -1; break;
+        case Direction::UpRight: dx = 1; dy = -1; break;
+        case Direction::DownLeft: dx = -1; dy = 1; break;
+        case Direction::DownRight: dx = 1; dy = 1; break;
+    }
+
+    Position checkPos = pos_;
+
+    // Check along the line of sight
+    while (true) {
+        checkPos.setX(checkPos.getX() + dx);
+        checkPos.setY(checkPos.getY() + dy);
+
+        // Check if we're out of bounds
+        if (checkPos.getX() < 0 || checkPos.getX() >= board_->getWidth() ||
+            checkPos.getY() < 0 || checkPos.getY() >= board_->getHeight()) {
+            return false;
+        }
+
+        // Check if position has a wall (blocks line of sight)
+        const auto& objects = board_->getObjectsAt(checkPos);
+        for (const auto& obj : objects) {
+            if (obj->getSymbol() == '#') {
+                return false; // Wall blocks view
+            }
+        }
+
+        // Check if there's an enemy tank at this position
+        for (const auto& tank : allTanks) {
+            if (tank && !tank->isDestroyed() && tank->getPlayerId() != playerId_ &&
+                tank->getPosition() == checkPos) {
+                return true; // Enemy spotted!
+            }
+        }
+
+        // For diagonal directions, we need to check if the path is blocked by walls
+        // in the horizontal or vertical directions (Bresenham's line algorithm would be better)
+        if (dx != 0 && dy != 0) {
+            // Check horizontal neighbor
+            Position horzPos(checkPos.getX() - dx, checkPos.getY());
+            const auto& horzObjects = board_->getObjectsAt(horzPos);
+            for (const auto& obj : horzObjects) {
+                if (obj->getSymbol() == '#') {
+                    return false;
+                }
+            }
+
+            // Check vertical neighbor
+            Position vertPos(checkPos.getX(), checkPos.getY() - dy);
+            const auto& vertObjects = board_->getObjectsAt(vertPos);
+            for (const auto& obj : vertObjects) {
+                if (obj->getSymbol() == '#') {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+bool Tank::canMoveForward() const {
+    if (!board_) return false;
+
+    Position nextPos = pos_;
+    switch (dir_) {
+        case Direction::Up: nextPos.moveUp(); break;
+        case Direction::Down: nextPos.moveDown(); break;
+        case Direction::Left: nextPos.moveLeft(); break;
+        case Direction::Right: nextPos.moveRight(); break;
+        case Direction::UpLeft:
+            nextPos.moveUp();
+            nextPos.moveLeft();
+            break;
+        case Direction::UpRight:
+            nextPos.moveUp();
+            nextPos.moveRight();
+            break;
+        case Direction::DownLeft:
+            nextPos.moveDown();
+            nextPos.moveLeft();
+            break;
+        case Direction::DownRight:
+            nextPos.moveDown();
+            nextPos.moveRight();
+            break;
+    }
+
+    // Check if the position is valid (within bounds)
+    if (nextPos.getX() < 0 || nextPos.getX() >= board_->getWidth() ||
+        nextPos.getY() < 0 || nextPos.getY() >= board_->getHeight()) {
+        return false;
+    }
+
+    // Check if the position has a wall
+    const auto& objects = board_->getObjectsAt(nextPos);
+    for (const auto& obj : objects) {
+        if (obj->getSymbol() == '#') {
+            return false; // Wall blocks movement
+        }
+    }
+
+    // Check if the position has another tank
+    for (const auto& obj : objects) {
+        Tank* otherTank = dynamic_cast<Tank*>(obj);
+        if (otherTank && otherTank != this) {
+            return false; // Another tank blocks movement
+        }
+    }
+
+    return true;
+}
+
+Direction Tank::getDirectionTowardEnemy(const std::vector<Tank*>& allTanks) const {
+    // Find the closest enemy tank
+    const Tank* closestEnemy = nullptr;
+    int minDistance = INT_MAX;
+
+    for (const auto& tank : allTanks) {
+        if (tank && tank->getPlayerId() != playerId_) {
+            int dist = std::abs(tank->getPosition().getX() - pos_.getX()) +
+                      std::abs(tank->getPosition().getY() - pos_.getY());
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestEnemy = tank;
+            }
+        }
+    }
+
+    if (!closestEnemy) return dir_; // No enemy found
+
+    // Determine best direction to move toward enemy
+    int enemyX = closestEnemy->getPosition().getX();
+    int enemyY = closestEnemy->getPosition().getY();
+    int myX = pos_.getX();
+    int myY = pos_.getY();
+
+    if (std::abs(enemyX - myX) > std::abs(enemyY - myY)) {
+        // Move horizontally toward enemy
+        return (enemyX > myX) ? Direction::Right : Direction::Left;
+    } else {
+        // Move vertically toward enemy
+        return (enemyY > myY) ? Direction::Down : Direction::Up;
+    }
+}
+
 
 
 // MOVE FORWARD
@@ -77,10 +272,9 @@ bool Tank::askToMoveBack() {
 // Returns true if the tank did move.
 bool Tank::moveBack()
 {
-
     // extra check (cuz the game manager should check it)
     // those are the only 2 situations the tank can move back
-    if ( (isRightAfterMoveBack_) || ( (isWaitingToMoveBack_ == true) && (waitToMoveBackCounter_ == 0) ))
+    if ( (isRightAfterMoveBack_) || ( isWaitingToMoveBack_ && (waitToMoveBackCounter_ == 0) ))
     {
         switch (dir_) {
             case Direction::Up:
@@ -269,10 +463,7 @@ void Tank::doNothing()
 //Each Tank object will have a different symbol - '1' or '2', depending on the player it belongs to
 char Tank::getSymbol() const
 {
-    if (playerId_ < 1 || playerId_ > 2)
-    {
-        return '?';
-    }
+    if (playerId_ < 1 || playerId_ > 2) return '?';
     return static_cast<char>('0' + playerId_);
 }
 
