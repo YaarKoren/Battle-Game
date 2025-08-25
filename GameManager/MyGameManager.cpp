@@ -1,16 +1,616 @@
 #include "MyGameManager.h"
 
-
-
 using namespace UserCommon_207177197_301251571;
 
 namespace GameManager_207177197_301251571 {
 
 REGISTER_GAME_MANAGER(MyGameManager);
 
+#include <iostream>
+#include <fstream>
+#include <utility>
+#include <type_traits>
+#include <algorithm>
+#include <memory>
+#include <cstdlib>
+#include <exception>
+#include <optional>
 
 
-// implement
+MyGameManager::MyGameManager(bool verbose) :  verbose_(verbose),
+    board_(1, 1) // meaningless initiazlization just to make it work
+    {}
+
+GameResult MyGameManager::run(
+        size_t map_width, size_t map_height,
+        const SatelliteView& map, // <= a snapshot, NOT updated
+        string map_name,
+        size_t max_steps, size_t num_shells,
+        Player& player1, string name1, Player& player2, string name2,
+        TankAlgorithmFactory player1_tank_algo_factory,
+        TankAlgorithmFactory player2_tank_algo_factory) {
+  //TODO
+
+  }
+
+int setalliteViewToBoardAndVectores(const SatelliteView& satelliteView){
+    //TODO
+
+    board_ = std::move(*board);
+
+    boardWidth_ = board_.getWidth();
+    boardHeight_ = board_.getHeight();
+
+    maxSteps_ = maxSteps;
+    numShells_ = numShells;
+
+    walls_ = std::move(walls);
+    mines_ = std::move(mines);
+
+    p1Tanks_ = p1Tanks;
+    p2Tanks_ = p2Tanks;
+
+  return 0;
+}
+
+int boardAndVectoresToSatelliteView() {
+    //TODO
+    return 0;
+}
+
+//pre run: read board + handle errors, create Players and Tank Algothrims
+int MyGameManager::pre_run(const std::string& inputFile) {
+    if (setalliteViewToBoardAndVectores == 1){
+      //error
+      }
+      //sucess
+      //continue
+
+    allTanksSorted_ = sortAllTanks(p1Tanks_, p2Tanks_);
+
+    //---1) create tanks algorithms
+    for (size_t i = 0; i < p1Tanks_.size(); ++i) {
+        auto algo = tankFactory_->create(1, static_cast<int>(i));
+        p1Tanks_[i]->setAlgorithm(std::make_unique<MyTankAlgorithm>(
+                std::move(algo), 1, static_cast<int>(i)));
+    }
+
+    for (size_t i = 0; i < p2Tanks_.size(); ++i) {
+        auto algo = tankFactory_->create(2, static_cast<int>(i));
+        p2Tanks_[i]->setAlgorithm(std::make_unique<MyTankAlgorithm>(
+                std::move(algo), 2, static_cast<int>(i)));
+    }
+
+    //---2) create Players
+    player1_ = playerFactory_->create(1, boardWidth_, boardHeight_, maxSteps_, numShells_);
+    player2_ = playerFactory_->create(2, boardWidth_, boardHeight_, maxSteps_, numShells_);
+
+
+    return 0;
+}
+
+
+int GameManager::run(const std::string& inputFile) {
+
+    //create and name output file / screen in case of fail to open
+    const std::string outputFileName = "output_" + inputFile;
+    std::ofstream file("../" + outputFileName);          // owns the file (if opened)
+
+    if (!file) {
+        std::cerr << "Failed to open output file: " << outputFileName << "\n"
+                  << "Printing results to the screen instead.\n";
+    }
+
+    // one variable to pass to all printers:
+    std::ostream& output_path = file ? static_cast<std::ostream&>(file)
+                             : static_cast<std::ostream&>(std::cout);
+
+
+    int stepCounter = 0;
+    stepsLeftWhenShellsOver_ = STEPS_WHEN_SHELLS_OVER;
+    int p1Alive = 0;
+    int p2Alive = 0;
+
+    //printToFile("=== Tank Game Start ==="); //this is for convenience, not for submitting
+
+    while (stepCounter < maxSteps_ && stepsLeftWhenShellsOver_ > 0) {
+        //printToFile("\n--- Step " + std::to_string(stepCounter) + " ---", output_path); //this is for convenience, not for submitting
+
+        if (checkIfPlayerLostAllTanks(p1Alive, p2Alive)) {break;}  //this returns true if a player, or both, lost all of his tanks.
+                                                                        //it also counts the alive tanks of each player, and keep it in p1Alive, p2Alive
+        //reset "setWasKilledThisStep" for all tanks
+        for (auto& t : p1Tanks_) {
+            t->setWasKilledThisStep(false);
+            t->setWasLastActionIgnored(false);
+        }
+        for (auto& t : p2Tanks_) {
+            t->setWasKilledThisStep(false);
+            t->setWasLastActionIgnored(false);
+        }
+
+        //***counters handling***
+        for (auto& t : p1Tanks_) if (!t->isDestroyed()) countersHandler(*t);
+        for (auto& t : p2Tanks_) if (!t->isDestroyed()) countersHandler(*t);
+
+        for (auto& t : p1Tanks_) {
+            if (!t->isDestroyed()) {
+                ActionRequest action = decideAction(*t, *t->getAlgorithm());
+                t->setNextAction(action);
+            }
+        }
+        for (auto& t : p2Tanks_) {
+            if (!t->isDestroyed()) {
+                ActionRequest action = decideAction(*t, *t->getAlgorithm());
+                t->setNextAction(action);
+            }
+        }
+
+        for (auto& t : p1Tanks_) if (!t->isDestroyed() && t->getNextAction() == ActionRequest::GetBattleInfo) handleRequestBattleInfo(*t);
+        for (auto& t : p2Tanks_) if (!t->isDestroyed() && t->getNextAction() == ActionRequest::GetBattleInfo) handleRequestBattleInfo(*t);
+
+        for (auto& t : p1Tanks_) if (!t->isDestroyed() && t->getNextAction() == ActionRequest::Shoot) handleShoot(*t);
+        for (auto& t : p2Tanks_) if (!t->isDestroyed() && t->getNextAction() == ActionRequest::Shoot) handleShoot(*t);
+
+        for (int i = 0; i < shellMovesPerStep_; ++i) {
+            shellStep();
+            cleanupDestroyedObjects(shells_);
+            cleanupDestroyedObjects(walls_);
+        }
+
+        for (auto& t : p1Tanks_) if (!t->isDestroyed() && t->getNextAction() != ActionRequest::Shoot && t->getNextAction() != ActionRequest::GetBattleInfo) handleAction(*t, t->getNextAction());
+        for (auto& t : p2Tanks_) if (!t->isDestroyed() && t->getNextAction() != ActionRequest::Shoot && t->getNextAction() != ActionRequest::GetBattleInfo) handleAction(*t, t->getNextAction());
+
+        for (auto& t : p1Tanks_) if (!t->isDestroyed()) handleAutoMoveTankBack(*t);
+        for (auto& t : p2Tanks_) if (!t->isDestroyed()) handleAutoMoveTankBack(*t);
+
+        for (auto& t : p1Tanks_) if (!t->isDestroyed()) resolveTankCollisionsAtPosition(*t);
+        for (auto& t : p2Tanks_) if (!t->isDestroyed()) resolveTankCollisionsAtPosition(*t);
+
+        cleanupDestroyedObjects(mines_);
+
+        if (getTotalShellsLeft() <= 0) {
+            --stepsLeftWhenShellsOver_;
+        }
+
+        stepCounter++;
+         printRoundToFile(output_path);
+    }
+
+    printGameResult(p1Alive, p2Alive, output_path);
+}
+
+ActionRequest GameManager::decideAction(Tank& tank, TankAlgorithm& algo){
+    if (tank.getIsWaitingToMoveBack()) {
+        return ActionRequest::DoNothing;
+    }
+
+    if (tank.getIsWaitingAfterShoot()) {
+        std::vector<Tank*> aliveTanks;
+        for (const auto& t : p1Tanks_) {
+            if (!t->isDestroyed()) {
+                aliveTanks.push_back(t.get());
+            }
+        }
+        for (const auto& t : p2Tanks_) {
+            if (!t->isDestroyed()) {
+                aliveTanks.push_back(t.get());
+            }
+        }
+
+        ActionRequest alternativeAction = tank.decideNextAction(aliveTanks);
+
+        if (alternativeAction == ActionRequest::Shoot) {
+            return ActionRequest::DoNothing;
+        }
+        return alternativeAction;
+    }
+
+    std::vector<Tank*> aliveTanks;
+    for (const auto& t : p1Tanks_) {
+        if (!t->isDestroyed()) {
+            aliveTanks.push_back(t.get());
+        }
+    }
+    for (const auto& t : p2Tanks_) {
+        if (!t->isDestroyed()) {
+            aliveTanks.push_back(t.get());
+        }
+    }
+
+    return tank.decideNextAction(aliveTanks);
+}
+
+int GameManager::getTotalShellsLeft() const {
+    int total = 0;
+    for (const auto& t : p1Tanks_) total += t->getShellsLeft();
+    for (const auto& t : p2Tanks_) total += t->getShellsLeft();
+    return total;
+}
+
+void GameManager::handleRequestBattleInfo(Tank& tank) {
+    tank.resetIsRightAfterMoveBack();
+    if (tank.getIsWaitingToMoveBack()) {
+        tank.setWasLastActionIgnored(true);
+        return;
+    }
+
+    std::vector<std::vector<char>> view(boardHeight_, std::vector<char>(boardWidth_, ' '));
+
+    for (size_t y = 0; y < boardHeight_; ++y) {
+        for (size_t x = 0; x < boardWidth_; ++x) {
+            const auto& objects = board_.getObjectsAt({(int)x, (int)y});
+            if (!objects.empty()) {
+                view[y][x] = objects.front()->getSymbol();
+            }
+        }
+    }
+
+    SatelliteViewImpl satellite(view);
+    int playerId = tank.getPlayerId();
+    Player* player = (playerId == 1) ? player1_.get() : player2_.get();
+
+    if (player) {
+        if (!tank.getAlgorithm()) {
+            std::cerr << "Tank has no algorithm! Player: " << tank.getPlayerId()
+                      << ", Tank ID: " << tank.getId() << std::endl;
+            return;
+        }
+        player->updateTankWithBattleInfo(*tank.getAlgorithm(), satellite);
+    }
+
+    tank.setLastAction(ActionRequest::GetBattleInfo);
+    tank.setWasLastActionIgnored(false);
+}
+
+void GameManager::handleShoot(Tank& tank) {
+    tank.resetIsRightAfterMoveBack();
+
+    if (tank.getIsWaitingAfterShoot()) {
+        tank.setWasLastActionIgnored(true);
+        return;
+    }
+
+    if (!tank.shoot()) {
+        tank.setWasLastActionIgnored(true);
+        return;
+    }
+    shells_.push_back(std::make_unique<Shell>(tank.getPosition(), tank.getDirection(), tank.getId()));
+    tank.setLastAction(ActionRequest::Shoot);
+    tank.setWasLastActionIgnored(false);
+}
+
+void GameManager::handleAction(Tank& tank, ActionRequest action) {
+    switch (action) {
+        case ActionRequest::MoveForward: handleMoveTankForward(tank); break;
+        case ActionRequest::MoveBackward: handleTankAskMoveBack(tank); break;
+        case ActionRequest::RotateLeft45: handleRotateEighthLeft(tank); break;
+        case ActionRequest::RotateLeft90: handleRotateFourthLeft(tank); break;
+        case ActionRequest::RotateRight45: handleRotateEighthRight(tank); break;
+        case ActionRequest::RotateRight90: handleRotateFourthRight(tank); break;
+        case ActionRequest::DoNothing: handleDoNothing(tank); break;
+        //default: std::cerr << "Error in handleAction: fall to default\n"; break; //should not happen!
+    }
+}
+
+void GameManager::countersHandler(Tank& tank) {
+    tank.updateWaitAfterShootCounter();
+    tank.resetIsWaitingAfterShoot();
+
+    tank.updateWaitToMoveBackCounter();
+    tank.resetIsWaitingToMoveBack();
+}
+
+void GameManager::handleAutoMoveTankBack(Tank& tank) {
+    if (tank.getIsWaitingToMoveBack() && tank.getWaitToMoveBackCounter() == 0) {
+        handleMoveTankBack(tank);
+    }
+}
+
+void GameManager::moveForwardAndWrap(Shell& shell) {
+    shell.moveForward();
+    Position newPos = shell.getPosition();
+    newPos.wrap(boardWidth_, boardHeight_);
+    shell.setPosition(newPos);
+}
+
+void GameManager::shellStep() {
+    for (auto& shell : shells_) {
+        moveForwardAndWrap(*shell);
+        board_.addGameObject(shell.get(), shell->getPosition());
+    }
+
+    for (auto& shell : shells_) {
+        if (!shell->isDestroyed()) {
+            resolveShellCollisionsAtPosition(*shell);
+        }
+    }
+}
+
+void GameManager::resolveShellCollisionsAtPosition(Shell& shell) {
+    Position pos = shell.getPosition();
+    const auto& objects = board_.getObjectsAt(pos);
+    for (const auto& obj : objects) {
+        if (auto* wall = dynamic_cast<Wall*>(obj)) {
+            wall->decreaseLifeLeft();
+            shell.destroy();
+        } else if (auto* anotherShell = dynamic_cast<Shell*>(obj)) {
+            anotherShell->destroy();
+            shell.destroy();
+        } else if (auto* tank = dynamic_cast<Tank*>(obj)) {
+            tank->destroy();
+            tank->setWasKilledThisStep(true);
+            shell.destroy();
+        }
+    }
+}
+
+void GameManager::resolveTankCollisionsAtPosition(Tank& tank) {
+    Position pos = tank.getPosition();
+    const auto& objects = board_.getObjectsAt(pos);
+    for (const auto& obj : objects) {
+        if (auto* mine = dynamic_cast<Mine*>(obj)) {
+            mine->destroy();
+            tank.destroy();
+            tank.setWasKilledThisStep(true);
+        } else if (auto* anotherTank = dynamic_cast<Tank*>(obj)) {
+            if (anotherTank != &tank) {
+                anotherTank->destroy();
+                anotherTank->setWasKilledThisStep(true);
+                tank.destroy();
+                tank.setWasKilledThisStep(true);
+            }
+        }
+    }
+}
+
+std::vector<Shell*> GameManager::getShellPtrs() const {
+    std::vector<Shell*> result;
+    for (const auto& shell : shells_) {
+        result.push_back(shell.get());
+    }
+    return result;
+}
+
+std::vector<Mine*> GameManager::getMinePtrs() const {
+    std::vector<Mine*> result;
+    for (const auto& mine : mines_) {
+        result.push_back(mine.get());
+    }
+    return result;
+}
+
+void GameManager::handleMoveTankForward(Tank& tank) {
+    tank.resetIsRightAfterMoveBack();
+    Position oldPos = tank.getPosition();
+
+    if (!tank.moveForward()) {
+        tank.setWasLastActionIgnored(true);
+        return;
+    }
+
+    Position newPos = tank.getPosition();
+    newPos.wrap(boardWidth_, boardHeight_);
+
+    const auto& objects = board_.getObjectsAt(newPos);
+    for (const auto& obj : objects) {
+        if (dynamic_cast<Wall*>(obj)) {
+            tank.setPosition(oldPos);
+            tank.setWasLastActionIgnored(true);
+            return;
+        }
+    }
+
+    tank.setPosition(newPos);
+    tank.setWasLastActionIgnored(false);
+    tank.setLastAction(ActionRequest::MoveForward);
+}
+
+void GameManager::handleMoveTankBack(Tank& tank) {
+    Position oldPos = tank.getPosition();
+
+    //in this case, we treat moving back as action request
+    if (tank.getIsRightAfterMoveBack()) {
+        if (!tank.moveBack()) {
+            tank.setWasLastActionIgnored(true);
+            return;
+        }
+
+        Position newPos = tank.getPosition();
+        newPos.wrap(boardWidth_, boardHeight_);
+
+        //check if there is wall in the new position.
+        //if there is, set last action to ignored and do not move the tank, aka do not change the tank's position
+        const auto& objects = board_.getObjectsAt(newPos);
+        for (const auto& obj : objects) {
+            if (dynamic_cast<Wall*>(obj)) {
+                tank.setPosition(oldPos);
+                tank.setWasLastActionIgnored(true);
+                return;
+            }
+        }
+
+        //if there is no wall
+        tank.setWasLastActionIgnored(false);
+        tank.setLastAction(ActionRequest::MoveBackward);
+    }
+
+    //in this case, we don't treat moving back as action request (it happens automatically after the waiting)
+    if (tank.getIsWaitingToMoveBack() && tank.getWaitToMoveBackCounter() == 0) {
+        if (!tank.moveBack()) {
+            return;
+        }
+        Position newPos = tank.getPosition();
+        newPos.wrap(boardWidth_, boardHeight_);
+
+        //check if there is wall in the new position.
+        //if there is, set last action to ignored and do not move the tank, aka do not change the tank's position
+        const auto& objects = board_.getObjectsAt(newPos);
+        for (const auto& obj : objects) {
+            if (dynamic_cast<Wall*>(obj)) {
+                tank.setPosition(oldPos);
+                return;
+            }
+        }
+    }
+}
+
+void GameManager::handleTankAskMoveBack(Tank& tank) {
+    if (tank.getIsRightAfterMoveBack()) {
+        handleMoveTankBack(tank);
+        return;
+    }
+    if (!tank.askToMoveBack()) {
+        tank.setWasLastActionIgnored(true);
+        return;
+    }
+    tank.setWasLastActionIgnored(false);
+    tank.setLastAction(ActionRequest::MoveBackward);
+}
+
+void GameManager::handleRotateEighthLeft(Tank& tank) {
+    tank.resetIsRightAfterMoveBack();
+    if (!tank.rotateEighthLeft()) {
+        tank.setWasLastActionIgnored(true);
+        return;
+    }
+    tank.setWasLastActionIgnored(false);
+    tank.setLastAction(ActionRequest::RotateLeft45);
+}
+
+void GameManager::handleRotateFourthLeft(Tank& tank) {
+    tank.resetIsRightAfterMoveBack();
+    if (!tank.rotateFourthLeft()) {
+        tank.setWasLastActionIgnored(true);
+        return;
+    }
+    tank.setWasLastActionIgnored(false);
+    tank.setLastAction(ActionRequest::RotateLeft90);
+}
+
+void GameManager::handleRotateEighthRight(Tank& tank) {
+    tank.resetIsRightAfterMoveBack();
+    if (!tank.rotateEighthRight()) {
+        tank.setWasLastActionIgnored(true);
+        return;
+    }
+    tank.setWasLastActionIgnored(false);
+    tank.setLastAction(ActionRequest::RotateRight45);
+}
+
+void GameManager::handleRotateFourthRight(Tank& tank) {
+    tank.resetIsRightAfterMoveBack();
+    if (!tank.rotateFourthRight()) {
+        tank.setWasLastActionIgnored(true);
+        return;
+    }
+    tank.setWasLastActionIgnored(false);
+    tank.setLastAction(ActionRequest::RotateRight90);
+}
+
+void GameManager::handleDoNothing(Tank& tank) {
+    tank.resetIsRightAfterMoveBack();
+    tank.doNothing();
+    tank.setWasLastActionIgnored(false);
+    tank.setLastAction(ActionRequest::DoNothing);
+}
+
+void GameManager::printToFile(const std::string& message, std::ostream& output_path) {
+    output_path << message << std::endl;
+}
+
+
+
+std::vector<Tank*> GameManager::sortAllTanks(const std::vector<std::unique_ptr<Tank>>& p1Tanks,
+                                       const std::vector<std::unique_ptr<Tank>>& p2Tanks) {
+    std::vector<Tank*> allTanks;
+
+    for (const auto& t : p1Tanks)
+       allTanks.push_back(t.get());
+
+    for (const auto& t : p2Tanks)
+        allTanks.push_back(t.get());
+
+    std::sort(allTanks.begin(), allTanks.end(), [](Tank* a, Tank* b) {
+        const Position& pa = a->getPosition();
+        const Position& pb = b->getPosition();
+        return (pa.getY() != pb.getY()) ? pa.getY() < pb.getY() : pa.getX() < pb.getX();
+    });
+
+    return allTanks;
+}
+
+void GameManager::printRoundToFile(std::ostream& output_path) {
+    std::vector<std::string> actionStrs;
+    actionStrs.reserve(allTanksSorted_.size());
+    bool allDoNothing = true;
+
+    for (size_t i = 0; i < allTanksSorted_.size(); ++i) {
+        Tank* tank = allTanksSorted_[i];
+        std::string actionStr;
+
+        ActionRequest next = tank->getNextAction();
+        if (next == ActionRequest::GetBattleInfo) {
+            actionStr = ActionUtils::toString(ActionRequest::DoNothing);
+        } else {
+            actionStr = ActionUtils::toString(next);
+        }
+
+        if (tank->getWasLastActionIgnored())
+            actionStr += " (ignored)";
+        if (tank->getWasKilledThisStep())
+            actionStr += " (killed)";
+
+        if (next != ActionRequest::DoNothing && next != ActionRequest::GetBattleInfo)
+            allDoNothing = false;
+        if (tank->getWasLastActionIgnored() || tank->getWasKilledThisStep())
+            allDoNothing = false;
+
+        actionStrs.push_back(std::move(actionStr));
+    }
+
+    if (allDoNothing) {
+        return;
+    }
+
+    for (size_t i = 0; i < actionStrs.size(); ++i) {
+        output_path << actionStrs[i];
+        if (i + 1 < actionStrs.size()) output_path << " ";
+    }
+   output_path << "\n";
+}
+
+void GameManager::printGameResult(int p1Alive, int p2Alive, std::ostream& output_path) {
+    if (p1Alive > 0 && p2Alive == 0) {
+        output_path << "Player 1 won with " << p1Alive << " tanks still alive\n";
+    } else if (p2Alive > 0 && p1Alive == 0) {
+       output_path << "Player 2 won with " << p2Alive << " tanks still alive\n";
+    } else if (p1Alive == 0 && p2Alive == 0) {
+        output_path << "Tie, both players have zero tanks\n";
+    } else if (stepsLeftWhenShellsOver_ >= STEPS_WHEN_SHELLS_OVER) {
+        output_path << "Tie, both players have zero shells for <"
+                    << STEPS_WHEN_SHELLS_OVER << "> steps\n";
+    } else {
+        output_path << "Tie, reached max steps = " << maxSteps_
+                    << ", player 1 has " << p1Alive
+                    << " tanks, player 2 has " << p2Alive << " tanks\n";
+    }
+}
+
+bool GameManager::checkIfPlayerLostAllTanks(int& p1Alive, int& p2Alive) {
+    p1Alive = std::count_if(p1Tanks_.begin(), p1Tanks_.end(),
+                                  [](const std::unique_ptr<Tank>& t) { return !t->isDestroyed(); });
+
+    p2Alive = std::count_if(p2Tanks_.begin(), p2Tanks_.end(),
+                                  [](const std::unique_ptr<Tank>& t) { return !t->isDestroyed(); });
+
+    if (p1Alive == 0 || p2Alive == 0) {
+       return true;
+    }
+
+    return false;
+}
+
+
 
 
 }

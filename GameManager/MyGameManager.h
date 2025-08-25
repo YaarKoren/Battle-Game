@@ -6,6 +6,8 @@
 #include <memory>
 #include <vector>
 #include <xmmintrin.h>
+#include <cstdlib>
+#include <exception>
 
 #include "../common/AbstractGameManager.h"
 #include "../common/ActionRequest.h"
@@ -23,8 +25,8 @@
 #include "../UserCommon/Mine.h"
 #include "../UserCommon/Wall.h"
 #include "../UserCommon/Shell.h"
-#include "../UserCommon/MyBattleInfo.h" //TODO: or the abstruct?
-#include "../UserCommon/SatelliteViewImpl.h"   //TODO: or the abstruct?
+#include "../UserCommon/MyBattleInfo.h" //TODO: or the abstract?
+#include "../UserCommon/SatelliteViewImpl.h"   //TODO: or the abstract?
 
 
 
