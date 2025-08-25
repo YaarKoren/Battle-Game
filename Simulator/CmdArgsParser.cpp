@@ -56,7 +56,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
       //parse args for Competitive mode, , and collect missing args if there are
       try {args.maps_folder_name_ = getAndValidateFileName(argc, argv, "game_maps_folder");}
       catch (const std::exception& e) {missing_args.emplace_back(e.what()); }
-      try {args.game_manager_so_name_ = getAndValidateFileName(argc, argv, "game_manager_so_filename");}
+      try {args.game_manager_so_name_ = getAndValidateFileName(argc, argv, "game_manager");}
       catch (const std::exception& e) {missing_args.emplace_back(e.what()); }
       try {args.algos_folder_name_ = getAndValidateFileName(argc, argv, "algorithms_folder");}
       catch (const std::exception& e) {missing_args.emplace_back(e.what()); }
