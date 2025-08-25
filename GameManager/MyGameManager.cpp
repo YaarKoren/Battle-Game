@@ -59,7 +59,7 @@ int boardAndVectoresToSatelliteView() {
 }
 
 //pre run: read board + handle errors, create Players and Tank Algothrims
-int MyGameManager::pre_run(const std::string& inputFile) {
+int MyGameManager::pre_run(const ::std::string& inputFile) {
     if (setalliteViewToBoardAndVectores == 1){
       //error
       }
@@ -90,7 +90,7 @@ int MyGameManager::pre_run(const std::string& inputFile) {
 }
 
 
-int GameManager::run(const std::string& inputFile) {
+int MyGameManager::run(const ::std::string& inputFile) {
 
     //create and name output file / screen in case of fail to open
     const std::string outputFileName = "output_" + inputFile;
@@ -116,6 +116,7 @@ int GameManager::run(const std::string& inputFile) {
     while (stepCounter < maxSteps_ && stepsLeftWhenShellsOver_ > 0) {
         //printToFile("\n--- Step " + std::to_string(stepCounter) + " ---", output_path); //this is for convenience, not for submitting
 
+        //cheking is first, to cover case of no tanks for one player or both, in the input setallite view
         if (checkIfPlayerLostAllTanks(p1Alive, p2Alive)) {break;}  //this returns true if a player, or both, lost all of his tanks.
                                                                         //it also counts the alive tanks of each player, and keep it in p1Alive, p2Alive
         //reset "setWasKilledThisStep" for all tanks
@@ -132,6 +133,7 @@ int GameManager::run(const std::string& inputFile) {
         for (auto& t : p1Tanks_) if (!t->isDestroyed()) countersHandler(*t);
         for (auto& t : p2Tanks_) if (!t->isDestroyed()) countersHandler(*t);
 
+        //***deciding tanks actions***
         for (auto& t : p1Tanks_) {
             if (!t->isDestroyed()) {
                 ActionRequest action = decideAction(*t, *t->getAlgorithm());
@@ -145,28 +147,43 @@ int GameManager::run(const std::string& inputFile) {
             }
         }
 
+        //***handle get battle info***
+        //it's first cuz the view is of the board before the current step
         for (auto& t : p1Tanks_) if (!t->isDestroyed() && t->getNextAction() == ActionRequest::GetBattleInfo) handleRequestBattleInfo(*t);
         for (auto& t : p2Tanks_) if (!t->isDestroyed() && t->getNextAction() == ActionRequest::GetBattleInfo) handleRequestBattleInfo(*t);
 
+        //***handle shooting***
+        //it's before other actions (except get battle info) cuz this is the choice we made in the game logic:
+        //first, we move the shells. then, we move the tanks.
         for (auto& t : p1Tanks_) if (!t->isDestroyed() && t->getNextAction() == ActionRequest::Shoot) handleShoot(*t);
         for (auto& t : p2Tanks_) if (!t->isDestroyed() && t->getNextAction() == ActionRequest::Shoot) handleShoot(*t);
 
         for (int i = 0; i < shellMovesPerStep_; ++i) {
-            shellStep();
+            shellStep(); //collisions are handled inside this function
             cleanupDestroyedObjects(shells_);
             cleanupDestroyedObjects(walls_);
+            //cleanupDestroyedObjects(p1Tanks_); //not cleaning, it's needed for creating output file
+            //cleanupDestroyedObjects(p2Tanks_); //not cleaning, it's needed for creating output file
+            //no need to clean mines at this point. shells do not hit mines.
         }
 
+        //***handle other actions (not get battle info / shoot)***
         for (auto& t : p1Tanks_) if (!t->isDestroyed() && t->getNextAction() != ActionRequest::Shoot && t->getNextAction() != ActionRequest::GetBattleInfo) handleAction(*t, t->getNextAction());
         for (auto& t : p2Tanks_) if (!t->isDestroyed() && t->getNextAction() != ActionRequest::Shoot && t->getNextAction() != ActionRequest::GetBattleInfo) handleAction(*t, t->getNextAction());
 
+        //***check if we need to move the tank back and move it, if yes***
         for (auto& t : p1Tanks_) if (!t->isDestroyed()) handleAutoMoveTankBack(*t);
         for (auto& t : p2Tanks_) if (!t->isDestroyed()) handleAutoMoveTankBack(*t);
 
+        //***resolve collisions***
         for (auto& t : p1Tanks_) if (!t->isDestroyed()) resolveTankCollisionsAtPosition(*t);
         for (auto& t : p2Tanks_) if (!t->isDestroyed()) resolveTankCollisionsAtPosition(*t);
 
         cleanupDestroyedObjects(mines_);
+        //cleanupDestroyedObjects(p1Tanks_); //not cleaning, it's needed for creating output file
+        //cleanupDestroyedObjects(p2Tanks_); //not cleaning, it's needed for creating output file
+        //no need to clean shells at this point. shells has been handled before.
+        //no need to clean walls at this point, cuz tanks can not hit walls.
 
         if (getTotalShellsLeft() <= 0) {
             --stepsLeftWhenShellsOver_;
@@ -179,33 +196,9 @@ int GameManager::run(const std::string& inputFile) {
     printGameResult(p1Alive, p2Alive, output_path);
 }
 
-ActionRequest GameManager::decideAction(Tank& tank, TankAlgorithm& algo){
-    if (tank.getIsWaitingToMoveBack()) {
-        return ActionRequest::DoNothing;
-    }
+ActionRequest MyGameManager::decideAction(Tank& tank, TankAlgorithm& algo){
 
-    if (tank.getIsWaitingAfterShoot()) {
-        std::vector<Tank*> aliveTanks;
-        for (const auto& t : p1Tanks_) {
-            if (!t->isDestroyed()) {
-                aliveTanks.push_back(t.get());
-            }
-        }
-        for (const auto& t : p2Tanks_) {
-            if (!t->isDestroyed()) {
-                aliveTanks.push_back(t.get());
-            }
-        }
-
-        ActionRequest alternativeAction = tank.decideNextAction(aliveTanks);
-
-        if (alternativeAction == ActionRequest::Shoot) {
-            return ActionRequest::DoNothing;
-        }
-        return alternativeAction;
-    }
-
-    std::vector<Tank*> aliveTanks;
+    ::std::vector<Tank*> aliveTanks;
     for (const auto& t : p1Tanks_) {
         if (!t->isDestroyed()) {
             aliveTanks.push_back(t.get());
@@ -216,8 +209,9 @@ ActionRequest GameManager::decideAction(Tank& tank, TankAlgorithm& algo){
             aliveTanks.push_back(t.get());
         }
     }
-
+    //it's ok that it's all tank, the algorithm can tell between its own tank and the opponent's
     return tank.decideNextAction(aliveTanks);
+
 }
 
 int GameManager::getTotalShellsLeft() const {
@@ -228,6 +222,7 @@ int GameManager::getTotalShellsLeft() const {
 }
 
 void GameManager::handleRequestBattleInfo(Tank& tank) {
+    //pre-action reset and check
     tank.resetIsRightAfterMoveBack();
     if (tank.getIsWaitingToMoveBack()) {
         tank.setWasLastActionIgnored(true);
@@ -235,7 +230,7 @@ void GameManager::handleRequestBattleInfo(Tank& tank) {
     }
 
     std::vector<std::vector<char>> view(boardHeight_, std::vector<char>(boardWidth_, ' '));
-
+    //create a 2D char representation of the board
     for (size_t y = 0; y < boardHeight_; ++y) {
         for (size_t x = 0; x < boardWidth_; ++x) {
             const auto& objects = board_.getObjectsAt({(int)x, (int)y});
@@ -244,16 +239,19 @@ void GameManager::handleRequestBattleInfo(Tank& tank) {
             }
         }
     }
-
+    //create a SatelliteViewImpl from it
     SatelliteViewImpl satellite(view);
+
+    //determine which player owns this tank
     int playerId = tank.getPlayerId();
     Player* player = (playerId == 1) ? player1_.get() : player2_.get();
 
+    //let the player update the tank's algorithm with BattleInfo
     if (player) {
         if (!tank.getAlgorithm()) {
-            std::cerr << "Tank has no algorithm! Player: " << tank.getPlayerId()
-                      << ", Tank ID: " << tank.getId() << std::endl;
-            return;
+            throw ::std::runtime_error (::std::string("Tank has no algorithm! Player: ") + tank.getPlayerId()
+                      +  ::std::string(", Tank ID: ") + tank.getId())
+
         }
         player->updateTankWithBattleInfo(*tank.getAlgorithm(), satellite);
     }
@@ -279,6 +277,7 @@ void GameManager::handleShoot(Tank& tank) {
     tank.setWasLastActionIgnored(false);
 }
 
+//not including get battle info + shoot
 void GameManager::handleAction(Tank& tank, ActionRequest action) {
     switch (action) {
         case ActionRequest::MoveForward: handleMoveTankForward(tank); break;
@@ -292,12 +291,12 @@ void GameManager::handleAction(Tank& tank, ActionRequest action) {
     }
 }
 
-void GameManager::countersHandler(Tank& tank) {
-    tank.updateWaitAfterShootCounter();
-    tank.resetIsWaitingAfterShoot();
+void MyGameManager::countersHandler(Tank& tank) {
+    tank.updateWaitAfterShootCounter(); //decrease counter only if the tank is after shoot + counter>0
+    tank.resetIsWaitingAfterShoot(); //change waiting_after_shoot to false, only if the tank is after shoot + counter==0
 
-    tank.updateWaitToMoveBackCounter();
-    tank.resetIsWaitingToMoveBack();
+    tank.updateWaitToMoveBackCounter(); //decrease counter only if the tank is waiting to move back + counter>0
+    tank.resetIsWaitingToMoveBack(); //change waiting_to_move_back to false, only if the tank was in waiting state + counter==0
 }
 
 void GameManager::handleAutoMoveTankBack(Tank& tank) {
@@ -435,6 +434,7 @@ void GameManager::handleMoveTankBack(Tank& tank) {
     }
 
     //in this case, we don't treat moving back as action request (it happens automatically after the waiting)
+    //this is why we don't update last action and if it eas ignored
     if (tank.getIsWaitingToMoveBack() && tank.getWaitToMoveBackCounter() == 0) {
         if (!tank.moveBack()) {
             return;
@@ -456,7 +456,7 @@ void GameManager::handleMoveTankBack(Tank& tank) {
 
 void GameManager::handleTankAskMoveBack(Tank& tank) {
     if (tank.getIsRightAfterMoveBack()) {
-        handleMoveTankBack(tank);
+        handleMoveTankBack(tank); //updates last action + if it was ignored
         return;
     }
     if (!tank.askToMoveBack()) {
@@ -530,6 +530,7 @@ std::vector<Tank*> GameManager::sortAllTanks(const std::vector<std::unique_ptr<T
     for (const auto& t : p2Tanks)
         allTanks.push_back(t.get());
 
+    //sort tanks by birth order (top to bottom (y axis), left to right (x axis))
     std::sort(allTanks.begin(), allTanks.end(), [](Tank* a, Tank* b) {
         const Position& pa = a->getPosition();
         const Position& pb = b->getPosition();
@@ -596,6 +597,9 @@ void GameManager::printGameResult(int p1Alive, int p2Alive, std::ostream& output
     }
 }
 
+    //returns true if a player, or both, lost all of his tanks.
+    //else, returns false
+    //also count and update the number of tanks for each player
 bool GameManager::checkIfPlayerLostAllTanks(int& p1Alive, int& p2Alive) {
     p1Alive = std::count_if(p1Tanks_.begin(), p1Tanks_.end(),
                                   [](const std::unique_ptr<Tank>& t) { return !t->isDestroyed(); });
@@ -610,7 +614,12 @@ bool GameManager::checkIfPlayerLostAllTanks(int& p1Alive, int& p2Alive) {
     return false;
 }
 
-
+/*not sure if needed
+template void GameManager::cleanupDestroyedObjects<Shell>(std::vector<std::unique_ptr<Shell>>&);
+template void GameManager::cleanupDestroyedObjects<Wall>(std::vector<std::unique_ptr<Wall>>&);
+template void GameManager::cleanupDestroyedObjects<Tank>(std::vector<std::unique_ptr<Tank>>&);
+template void GameManager::cleanupDestroyedObjects<Mine>(std::vector<std::unique_ptr<Mine>>&);
+ */
 
 
 }

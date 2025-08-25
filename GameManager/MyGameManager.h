@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <algorithm>
 #include <type_traits>
 #include <fstream>
