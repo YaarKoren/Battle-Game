@@ -83,7 +83,7 @@ int MySimulator::run() //int cuz we want the program to always finish gracefully
         try {
            runComparative(oss);
         } catch (const std::exception& e) {
-            ErrorMsg::error_and_usage(e.what()); //msg to screen on input file (map/so file) fatal errors
+            ErrorMsg::error_and_usage(e.what()); //msg to screen on fatal errors (including input files fatal errors)
             return 1;
         }
             catch (...) {
@@ -91,11 +91,11 @@ int MySimulator::run() //int cuz we want the program to always finish gracefully
             return 1;
         }
     }
-    if (args_.mode_ == Mode::Competitive) {
+    else if (args_.mode_ == Mode::Competitive) {
         try {
             runCompetitive(oss);
         } catch (const std::exception& e) {
-            ErrorMsg::error_and_usage(e.what()); //msg to screen on input file (map/so file) fatal errors
+            ErrorMsg::error_and_usage(e.what()); //msg to screen on fatal errors (including input files fatal errors)
             return 1;
         }
         catch (...) {
@@ -443,11 +443,18 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
 {
     //get so files from folder
     std::vector<std::string> gm_so_paths = getSoFilesList(managersFolder);
+
+    //debug printing
+    std::cerr << "[SIM] gm_so_paths:\n";
+    for (auto& p : gm_so_paths) std::cerr << "  " << p << "\n";
+
     if (gm_so_paths.empty()) {
         throw std::runtime_error(std::string("No .so files in Game Managers dir:  ") + managersFolder);
     }
 
     const size_t gm_so_paths_num = gm_so_paths.size();
+
+
 
     //load and validate
     std::vector<std::unique_ptr<SharedLib>> GM_libs; // TankAlgo+Player .so handles
@@ -466,6 +473,10 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
             oss << "Error in Game Manger .so file:\n" << e.what() << "\n\n";
         }
     }
+
+    //debug printing
+    std::cerr << "[SIM] indices:\n";
+    for (auto i : indices) std::cerr << "  " << i << "\n";
 
     size_t gm_num = indices.size();
     if (gm_num == 0) {

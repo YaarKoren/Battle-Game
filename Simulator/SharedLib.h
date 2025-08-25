@@ -12,7 +12,7 @@ struct SharedLib {
 
     SharedLib() = default;
     explicit SharedLib(const std::string& path) {
-        handle = dlopen(path.c_str(), RTLD_NOW);
+        handle = dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL);
         if (!handle) {
             throw std::runtime_error(std::string("[dlopen] ") + path + std::string(" : ") + dlerror());
         }

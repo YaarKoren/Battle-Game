@@ -63,7 +63,7 @@ CmdArgsParser::CmdArgs CmdArgsParser::parse(int argc, char* argv[]) {
 
       //build allow-lists for this mode
       const std::vector<std::string> exactFlags = {
-          "-comparative", "-verbose"
+          "-competition", "-verbose"
       };
 
       const std::vector<std::string> kvPrefixes = {

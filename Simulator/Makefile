@@ -5,7 +5,7 @@ TARGET     := simulator_$(IDS)  # create the executable directly in the Simulato
 CXX      ?= g++-11
 CPPFLAGS := -I. -I../common -I../UserCommon   # headers go in CPPFLAGS
 CXXFLAGS := -std=c++20 -Wall -Wextra -Werror -pedantic -O2 -fPIC
-LDFLAGS  :=
+LDFLAGS  := -rdynamic
 LDLIBS   := -ldl -lpthread        # keep -ldl for dlopen/dlsym, add -lpthread if you use threads
 
 # Sources: everything in this folder + any UserCommon .cpp you need
