@@ -24,7 +24,7 @@
 #include "../UserCommon/Wall.h"
 #include "../UserCommon/Shell.h"
 #include "../UserCommon/MyBattleInfo.h" //TODO: or the abstruct?
-#include "../UserCommon/SatelliteViewImpl.h"   //TODO: or the abstruct?cd ..
+#include "../UserCommon/SatelliteViewImpl.h"   //TODO: or the abstruct?
 
 
 
@@ -77,13 +77,18 @@ private:
     int shellMovesPerStep_ = SHELL_MOVES_PER_STEP;
     int stepCounter_ = 0;
 
-    void initializeGameState(const SatelliteView& map);
+    //helper functions for assignemnt 3 (getting and returning SatelliteView)
+    int setalliteViewToBoardAndVectores(const SatelliteView& satelliteView);
+    int boardAndVectoresToSatelliteView() const;
+
     int pre_run();
     int run();
 
 
 
-    //Handling tank's actions
+
+
+    // Tank action handlers
     void handleMoveTankForward(UserCommon_207177197_301251571::Tank& tank);
     void handleMoveTankBack(UserCommon_207177197_301251571::Tank& tank);
     void handleTankAskMoveBack(UserCommon_207177197_301251571::Tank& tank);
@@ -94,10 +99,12 @@ private:
     void handleRotateFourthRight(UserCommon_207177197_301251571::Tank& tank);
     void handleDoNothing(UserCommon_207177197_301251571::Tank& tank);
     void handleRequestBattleInfo(UserCommon_207177197_301251571::Tank& tank);
-
     void handleAction(UserCommon_207177197_301251571::Tank& tank, ActionRequest action);
 
-    //helper functions for the run() functions
+
+
+    // Helper functions
+    ActionRequest decideAction(UserCommon_207177197_301251571::Tank& t, TankAlgorithm& algo);
     int getTotalShellsLeft() const;
     void countersHandler(UserCommon_207177197_301251571::Tank& tank);
     void handleAutoMoveTankBack(UserCommon_207177197_301251571::Tank& tank);
@@ -128,7 +135,7 @@ private:
     static void printToFile(const std::string& message, std::ostream& output_path);
 
 
-    //for creating the output file
+    // Output file functions
     std::vector<UserCommon_207177197_301251571::Tank*> sortAllTanks(const std::vector<std::unique_ptr<UserCommon_207177197_301251571::Tank>>& p1Tanks,
                                     const std::vector<std::unique_ptr<UserCommon_207177197_301251571::Tank>>& p2Tanks);
     void printRoundToFile(std::ostream& output_path);
