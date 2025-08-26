@@ -5,6 +5,10 @@
 
 #include "Position.h"
 #include "GameObject.h"
+#include "Wall.h"
+#include "Tank.h"
+#include "Mine.h"
+#include "Shell.h"
 
 //those are not needed, cuz we use the abstract class
 /*
@@ -19,13 +23,13 @@ namespace UserCommon_207177197_301251571 {
 
 class Board {
 private:
-    int width_, height_;
+    size_t width_, height_;
 
     std::vector<std::vector<std::vector<GameObject*>>> grid; // each entry of the matrix, holds of a vector of GameObject*,
                                                             //to support multiple GameObjects in the entry (i.e. a mine and a shell)
 
 public:
-    Board(int w, int h);
+    Board(size_t w, size_t h);
 
     // No default-constructed boards:
     Board() = delete;
@@ -42,8 +46,8 @@ public:
 
 
     //Getters
-    int getWidth() const { return width_; }
-    int getHeight() const { return height_; }
+    size_t getWidth() const { return width_; }
+    size_t getHeight() const { return height_; }
     const std::vector<GameObject*>& getObjectsAt(Position pos) const;
 
 
@@ -62,6 +66,9 @@ public:
     //void cleanDestroyedWalls();
     void clear();
 
+    void Board::boardToCharGrid(std::vector<std::vector<char>> char_grid) const;
+
+    void Board::resize(size_t w, size_t h);
 
 };
 

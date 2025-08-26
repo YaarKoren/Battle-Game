@@ -143,14 +143,13 @@ private:
     static void printToFile(const std::string& message, std::ostream& output_path);
 
 
-    // Output file functions
+    // GameResult and output file functions
     std::string makeUniquePath(); //make unique output name with a unique time stamp
     std::vector<UserCommon_207177197_301251571::Tank*> sortAllTanks(const std::vector<std::unique_ptr<UserCommon_207177197_301251571::Tank>>& p1Tanks,
                                     const std::vector<std::unique_ptr<UserCommon_207177197_301251571::Tank>>& p2Tanks);
     void printRoundToFile(std::ostream& output_path);
-    void printGameResult(int p1Alive, int p2Alive, std::ostream& output_path);
-    bool checkIfPlayerLostAllTanks(int& p1Alive, int& p2Alive);
-    static std::string makeUniquePath(std::string folder_path, std::string mode_name); //time helper function
+    void printGameResult(size_t p1Alive, size_t p2Alive, std::ostream& output_path);
+    bool checkIfPlayerLostAllTanks(size_t& p1Alive, size_t& p2Alive);
 
 };
 

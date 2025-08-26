@@ -57,7 +57,7 @@ GameResult MyGameManager::run(
    allTanksSorted_ = sortAllTanks(p1Tanks_, p2Tanks_); //for output file //TODO maybe inside run()
 
    run();   //print results if verobose_ == true
-   			//upadates final_result when done
+   			//upadates final_result when done //TODO
    //TODO try catch or check the int
 
   GameResult result = std::move(final_result_);
@@ -72,8 +72,9 @@ int MyGameManager::setalliteViewToBoardAndVectores(const SatelliteView& satellit
     // assert(map_width_  == satelliteView.width()); //no such method in the interface
     // assert(map_height_ == satelliteView.height()); //no such method in the interface
 
-    // clear previous state
+    // clear previous state, for saftey
     board_.clear();
+    board_.resize(map_width_, map_height_);
     walls_.clear(); mines_.clear(); p1Tanks_.clear(); p2Tanks_.clear();
 
     //go thru all entries, get the char
@@ -121,64 +122,64 @@ int MyGameManager::setalliteViewToBoardAndVectores(const SatelliteView& satellit
 }
 
 
-
-int boardAndVectoresToSatelliteView() {
-    //TODO
-    ::std::unique_ptr<SatelliteView> final_s_view = std::make_unique<SatelliteViewImpl>(/*add params*/); // or create an empty consstructor
-    //return setallite View? unq ptr? we create the impl' version and return the abstract version?
-    return 0;
-}
-
-
-
 int MyGameManager::run() {
 
-    if (verbose_) {
-		//create and name output file / screen in case of fail to open
-    	// Fourm specs: create the file in the working directory
-    	const std::string output_file_name = makeUniquePath();
-   		std::ofstream file(output_file_name);          // owns the file (if opened)
-   		if (!file) {
-    	  std::cerr << "Failed to open output file: " << output_file_name << "\n"
-       	       << "Printing results to the screen instead.\n";
-    	}
+	//------------------------------------------------------------------------------------------------
+	//create and name output file / screen in case of fail to open
+    // Fourm specs: create the file in the working directory
+    const std::string output_file_name = makeUniquePath();
+   	std::ofstream file(output_file_name);          // owns the file (if opened)
+   	if (!file) {
+              if (verbose_) {
+                std::cerr << "Failed to open output file: " << output_file_name << "\n"
+       	       		<< "Printing results to the screen instead.\n";
+              }
 
-   		// one variable to pass to all printers:
-   		std::ostream& output_path = file ? static_cast<std::ostream&>(file)
-                       	  : static_cast<std::ostream&>(std::cout);
-	}
+    }
 
+   	// one variable to pass to all printers:
+   	std::ostream& output_path = file ? static_cast<std::ostream&>(file)
+                      : static_cast<std::ostream&>(std::cout);
 
+	//------------------------------------------------------------------------------------------------
+
+	size_t num_of_alive_p1_tanks = 0;
+    size_t num_of_alive_p2_tanks = 0;
+    //std::vector<std::vector<char>> char_grid;        // default-constructed, empty
+    std::vector<std::vector<char>> char_grid(map_height_, std::vector<char>(map_width_, ' '));
 
 	//check for edge cases
    	if (map_width_ ==0 || map_height_ == 0) {
           //technically there are no tanks for each player, so it's a tie
           final_result_.winner = 0 ;//tie
           final_result_.reason = GameResult::Reason::ALL_TANKS_DEAD;
-          final_result_.remaining_tanks = std::vector<size_t>(0, 0);
-          final_result_.gameState = //TODO return the same map we got
+          final_result_.remaining_tanks = {num_of_alive_p1_tanks, num_of_alive_p1_tanks};
+          final_result_.gameState = std::make_unique<SatelliteViewImpl>(char_grid); //empty
           final_result_.rounds = 0;
           //TODO print to file
           return 0;
    	}
+    if (max_steps_ == 0) {
+          checkIfPlayerLostAllTanks(num_of_alive_p1_tanks, num_of_alive_p2_tanks);
+          if (num_of_alive_p1_tanks > num_of_alive_p2_tanks) final_result_.winner = 1;
+          else if (num_of_alive_p1_tanks < num_of_alive_p2_tanks) final_result_.winner = 2;
+          else final_result_.winner = 0;
+          final_result_.reason = GameResult::Reason::MAX_STEPS;
+          final_result_.remaining_tanks = {num_of_alive_p1_tanks, num_of_alive_p1_tanks};
+          board_.boardToCharGrid(char_grid); //updates char_grid
+          final_result_.gameState = std::make_unique<SatelliteViewImpl>(char_grid);
+          final_result_.rounds = 0;
+          //TODO print to file
+          return 0;
+    }
 
-      if (max_steps_ == 0) {
+    //TODO: if both?
 
-      }
+    //----------------------------------------------------------------------------------------------------
 
-      if (num_shells_ == 0) {
-
-      }
-
-
-
-
-
+    if (num_shells_ == 0) max_steps_ = STEPS_WHEN_SHELLS_OVER; //cuz we check if shlles are over only insdie the loop, after the first round
 
     int stepCounter = 0;
-    stepsLeftWhenShellsOver_ = STEPS_WHEN_SHELLS_OVER;
-    int num_of_alive_p1_tanks = 0;
-    int num_of_alive_p2_tanks = 0;
 
     //printToFile("=== Tank Game Start ==="); //this is for convenience, not for submitting
 
@@ -259,13 +260,16 @@ int MyGameManager::run() {
         }
 
         stepCounter++;
-         printRoundToFile(output_path);
+        if (verbose_) printRoundToFile(output_path);
     }
 
-    printGameResult(num_of_alive_p1_tanks, num_of_alive_p2_tanks, output_path);
-
+     if (verbose_) printGameResult(num_of_alive_p1_tanks, num_of_alive_p2_tanks, output_path);
+	//TODO update final_result
     return 0;
 }
+
+//-----------------------------------------------------------------------------------------------------
+
 
 ActionRequest MyGameManager::decideAction(Tank& tank, TankAlgorithm& algo){
 
@@ -285,14 +289,14 @@ ActionRequest MyGameManager::decideAction(Tank& tank, TankAlgorithm& algo){
 
 }
 
-int GameManager::getTotalShellsLeft() const {
+int MyGameManager::getTotalShellsLeft() const {
     int total = 0;
     for (const auto& t : p1Tanks_) total += t->getShellsLeft();
     for (const auto& t : p2Tanks_) total += t->getShellsLeft();
     return total;
 }
 
-void GameManager::handleRequestBattleInfo(Tank& tank) {
+void MyGameManager::handleRequestBattleInfo(Tank& tank) {
     //pre-action reset and check
     tank.resetIsRightAfterMoveBack();
     if (tank.getIsWaitingToMoveBack()) {
@@ -300,10 +304,11 @@ void GameManager::handleRequestBattleInfo(Tank& tank) {
         return;
     }
 
-    std::vector<std::vector<char>> view(boardHeight_, std::vector<char>(boardWidth_, ' '));
+    //TODO : CHANGE, ITS NOT THE FIRST ITS THE TOP + CAN BE BORAD TO SATELLITE
+    std::vector<std::vector<char>> view(map_height_, std::vector<char>(map_width_, ' '));
     //create a 2D char representation of the board
-    for (size_t y = 0; y < boardHeight_; ++y) {
-        for (size_t x = 0; x < boardWidth_; ++x) {
+    for (size_t y = 0; y < map_height_; ++y) {
+        for (size_t x = 0; x < map_width_; ++x) {
             const auto& objects = board_.getObjectsAt({(int)x, (int)y});
             if (!objects.empty()) {
                 view[y][x] = objects.front()->getSymbol();
@@ -331,7 +336,7 @@ void GameManager::handleRequestBattleInfo(Tank& tank) {
     tank.setWasLastActionIgnored(false);
 }
 
-void GameManager::handleShoot(Tank& tank) {
+void MyGameManager::handleShoot(Tank& tank) {
     tank.resetIsRightAfterMoveBack();
 
     if (tank.getIsWaitingAfterShoot()) {
@@ -349,7 +354,7 @@ void GameManager::handleShoot(Tank& tank) {
 }
 
 //not including get battle info + shoot
-void GameManager::handleAction(Tank& tank, ActionRequest action) {
+void MyGameManager::handleAction(Tank& tank, ActionRequest action) {
     switch (action) {
         case ActionRequest::MoveForward: handleMoveTankForward(tank); break;
         case ActionRequest::MoveBackward: handleTankAskMoveBack(tank); break;
@@ -370,20 +375,20 @@ void MyGameManager::countersHandler(Tank& tank) {
     tank.resetIsWaitingToMoveBack(); //change waiting_to_move_back to false, only if the tank was in waiting state + counter==0
 }
 
-void GameManager::handleAutoMoveTankBack(Tank& tank) {
+void MyGameManager::handleAutoMoveTankBack(Tank& tank) {
     if (tank.getIsWaitingToMoveBack() && tank.getWaitToMoveBackCounter() == 0) {
         handleMoveTankBack(tank);
     }
 }
 
-void GameManager::moveForwardAndWrap(Shell& shell) {
+void MyGameManager::moveForwardAndWrap(Shell& shell) {
     shell.moveForward();
     Position newPos = shell.getPosition();
-    newPos.wrap(boardWidth_, boardHeight_);
+    newPos.wrap(map_width_, map_height_);
     shell.setPosition(newPos);
 }
 
-void GameManager::shellStep() {
+void MyGameManager::shellStep() {
     for (auto& shell : shells_) {
         moveForwardAndWrap(*shell);
         board_.addGameObject(shell.get(), shell->getPosition());
@@ -396,7 +401,7 @@ void GameManager::shellStep() {
     }
 }
 
-void GameManager::resolveShellCollisionsAtPosition(Shell& shell) {
+void MyGameManager::resolveShellCollisionsAtPosition(Shell& shell) {
     Position pos = shell.getPosition();
     const auto& objects = board_.getObjectsAt(pos);
     for (const auto& obj : objects) {
@@ -414,7 +419,7 @@ void GameManager::resolveShellCollisionsAtPosition(Shell& shell) {
     }
 }
 
-void GameManager::resolveTankCollisionsAtPosition(Tank& tank) {
+void MyGameManager::resolveTankCollisionsAtPosition(Tank& tank) {
     Position pos = tank.getPosition();
     const auto& objects = board_.getObjectsAt(pos);
     for (const auto& obj : objects) {
@@ -433,7 +438,7 @@ void GameManager::resolveTankCollisionsAtPosition(Tank& tank) {
     }
 }
 
-std::vector<Shell*> GameManager::getShellPtrs() const {
+std::vector<Shell*> MyGameManager::getShellPtrs() const {
     std::vector<Shell*> result;
     for (const auto& shell : shells_) {
         result.push_back(shell.get());
@@ -441,7 +446,7 @@ std::vector<Shell*> GameManager::getShellPtrs() const {
     return result;
 }
 
-std::vector<Mine*> GameManager::getMinePtrs() const {
+std::vector<Mine*> MyGameManager::getMinePtrs() const {
     std::vector<Mine*> result;
     for (const auto& mine : mines_) {
         result.push_back(mine.get());
@@ -449,7 +454,7 @@ std::vector<Mine*> GameManager::getMinePtrs() const {
     return result;
 }
 
-void GameManager::handleMoveTankForward(Tank& tank) {
+void MyGameManager::handleMoveTankForward(Tank& tank) {
     tank.resetIsRightAfterMoveBack();
     Position oldPos = tank.getPosition();
 
@@ -459,7 +464,7 @@ void GameManager::handleMoveTankForward(Tank& tank) {
     }
 
     Position newPos = tank.getPosition();
-    newPos.wrap(boardWidth_, boardHeight_);
+    newPos.wrap(map_width_, map_height_);
 
     const auto& objects = board_.getObjectsAt(newPos);
     for (const auto& obj : objects) {
@@ -475,7 +480,7 @@ void GameManager::handleMoveTankForward(Tank& tank) {
     tank.setLastAction(ActionRequest::MoveForward);
 }
 
-void GameManager::handleMoveTankBack(Tank& tank) {
+void MyGameManager::handleMoveTankBack(Tank& tank) {
     Position oldPos = tank.getPosition();
 
     //in this case, we treat moving back as action request
@@ -486,7 +491,7 @@ void GameManager::handleMoveTankBack(Tank& tank) {
         }
 
         Position newPos = tank.getPosition();
-        newPos.wrap(boardWidth_, boardHeight_);
+        newPos.wrap(map_width_, map_height_);
 
         //check if there is wall in the new position.
         //if there is, set last action to ignored and do not move the tank, aka do not change the tank's position
@@ -511,7 +516,7 @@ void GameManager::handleMoveTankBack(Tank& tank) {
             return;
         }
         Position newPos = tank.getPosition();
-        newPos.wrap(boardWidth_, boardHeight_);
+        newPos.wrap(map_width_, map_height_);
 
         //check if there is wall in the new position.
         //if there is, set last action to ignored and do not move the tank, aka do not change the tank's position
@@ -525,7 +530,7 @@ void GameManager::handleMoveTankBack(Tank& tank) {
     }
 }
 
-void GameManager::handleTankAskMoveBack(Tank& tank) {
+void MyGameManager::handleTankAskMoveBack(Tank& tank) {
     if (tank.getIsRightAfterMoveBack()) {
         handleMoveTankBack(tank); //updates last action + if it was ignored
         return;
@@ -538,7 +543,7 @@ void GameManager::handleTankAskMoveBack(Tank& tank) {
     tank.setLastAction(ActionRequest::MoveBackward);
 }
 
-void GameManager::handleRotateEighthLeft(Tank& tank) {
+void MyGameManager::handleRotateEighthLeft(Tank& tank) {
     tank.resetIsRightAfterMoveBack();
     if (!tank.rotateEighthLeft()) {
         tank.setWasLastActionIgnored(true);
@@ -548,7 +553,7 @@ void GameManager::handleRotateEighthLeft(Tank& tank) {
     tank.setLastAction(ActionRequest::RotateLeft45);
 }
 
-void GameManager::handleRotateFourthLeft(Tank& tank) {
+void MyGameManager::handleRotateFourthLeft(Tank& tank) {
     tank.resetIsRightAfterMoveBack();
     if (!tank.rotateFourthLeft()) {
         tank.setWasLastActionIgnored(true);
@@ -558,7 +563,7 @@ void GameManager::handleRotateFourthLeft(Tank& tank) {
     tank.setLastAction(ActionRequest::RotateLeft90);
 }
 
-void GameManager::handleRotateEighthRight(Tank& tank) {
+void MyGameManager::handleRotateEighthRight(Tank& tank) {
     tank.resetIsRightAfterMoveBack();
     if (!tank.rotateEighthRight()) {
         tank.setWasLastActionIgnored(true);
@@ -568,7 +573,7 @@ void GameManager::handleRotateEighthRight(Tank& tank) {
     tank.setLastAction(ActionRequest::RotateRight45);
 }
 
-void GameManager::handleRotateFourthRight(Tank& tank) {
+void MyGameManager::handleRotateFourthRight(Tank& tank) {
     tank.resetIsRightAfterMoveBack();
     if (!tank.rotateFourthRight()) {
         tank.setWasLastActionIgnored(true);
@@ -578,20 +583,20 @@ void GameManager::handleRotateFourthRight(Tank& tank) {
     tank.setLastAction(ActionRequest::RotateRight90);
 }
 
-void GameManager::handleDoNothing(Tank& tank) {
+void MyGameManager::handleDoNothing(Tank& tank) {
     tank.resetIsRightAfterMoveBack();
     tank.doNothing();
     tank.setWasLastActionIgnored(false);
     tank.setLastAction(ActionRequest::DoNothing);
 }
 
-void GameManager::printToFile(const std::string& message, std::ostream& output_path) {
+void MyGameManager::printToFile(const std::string& message, std::ostream& output_path) {
     output_path << message << std::endl;
 }
 
 
 
-std::vector<Tank*> GameManager::sortAllTanks(const std::vector<std::unique_ptr<Tank>>& p1Tanks,
+std::vector<Tank*> MyGameManager::sortAllTanks(const std::vector<std::unique_ptr<Tank>>& p1Tanks,
                                        const std::vector<std::unique_ptr<Tank>>& p2Tanks) {
     std::vector<Tank*> allTanks;
 
@@ -611,7 +616,7 @@ std::vector<Tank*> GameManager::sortAllTanks(const std::vector<std::unique_ptr<T
     return allTanks;
 }
 
-void GameManager::printRoundToFile(std::ostream& output_path) {
+void MyGameManager::printRoundToFile(std::ostream& output_path) {
     std::vector<std::string> actionStrs;
     actionStrs.reserve(allTanksSorted_.size());
     bool allDoNothing = true;
@@ -651,7 +656,7 @@ void GameManager::printRoundToFile(std::ostream& output_path) {
    output_path << "\n";
 }
 
-void GameManager::printGameResult(int p1Alive, int p2Alive, std::ostream& output_path) {
+void MyGameManager::printGameResult(int p1Alive, int p2Alive, std::ostream& output_path) {
     if (p1Alive > 0 && p2Alive == 0) {
         output_path << "Player 1 won with " << p1Alive << " tanks still alive\n";
     } else if (p2Alive > 0 && p1Alive == 0) {
@@ -662,7 +667,7 @@ void GameManager::printGameResult(int p1Alive, int p2Alive, std::ostream& output
         output_path << "Tie, both players have zero shells for <"
                     << STEPS_WHEN_SHELLS_OVER << "> steps\n";
     } else {
-        output_path << "Tie, reached max steps = " << maxSteps_
+        output_path << "Tie, reached max steps = " << max_steps_
                     << ", player 1 has " << p1Alive
                     << " tanks, player 2 has " << p2Alive << " tanks\n";
     }
@@ -671,7 +676,7 @@ void GameManager::printGameResult(int p1Alive, int p2Alive, std::ostream& output
     //returns true if a player, or both, lost all of his tanks.
     //else, returns false
     //also count and update the number of tanks for each player
-bool GameManager::checkIfPlayerLostAllTanks(int& p1Alive, int& p2Alive) {
+bool MyGameManager::checkIfPlayerLostAllTanks(size_t& p1Alive, size_t& p2Alive) {
     p1Alive = std::count_if(p1Tanks_.begin(), p1Tanks_.end(),
                                   [](const std::unique_ptr<Tank>& t) { return !t->isDestroyed(); });
 

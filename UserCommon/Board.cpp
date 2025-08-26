@@ -5,7 +5,7 @@
 namespace UserCommon_207177197_301251571 {
 
 
-Board::Board(int w, int h) : width_(w), height_(h) {
+Board::Board(size_t w, size_t h) : width_(w), height_(h) {
     grid.resize(height_, std::vector<std::vector<GameObject*>>(width_));
 }
 
@@ -68,12 +68,37 @@ void Board::removeObject(GameObject* objToRemove, Position pos)
 
 void Board::clear()
 {
-    for (int y = 0; y < height_; ++y) {
-        for (int x = 0; x < width_; ++x) {
-            grid[y][x].clear();
-        }
-    }
+    grid.clear(); //deletes also the rows and cols
 }
 
+//this function should help create a SetelliteView, thus according to assignment specs, the char chose in//case of multipile game objects in the enrty, is the most top one (i.e. shell is on top of a mine etc)
+//the caller is responsible to pass the char grid in the right size
+    //TODO it makes board knows the specifc game objects but maybe it's ok
+void Board::boardToCharGrid(std::vector<std::vector<char>> char_grid) const
+{
+    for (size_t y = 0; y < height_; ++y)
+    {
+        for (size_t x = 0; x < width_; ++x)
+        {
+            //TODO
+            const auto& objects = grid[y][x];
+
+            for (const auto& obj : objects) {
+
+                if (dynamic_cast<Wall*>(obj)) char_grid[y][x] = '#';
+                else if (dynamic_cast<Wall*>(obj)) char_grid[y][x] = '*';
+                }
+            }
+        }
+    }
+
+void Board::resize(size_t w, size_t h) {
+    width_ = w;
+    height_ = h;
+    grid.assign(height_, std::vector<std::vector<GameObject*>>(width_));
 }
+}
+
+
+
 
