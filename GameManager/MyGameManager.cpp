@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <exception>
 #include <optional>
+#include <fstream>
 
 using namespace UserCommon_207177197_301251571;
 
@@ -55,16 +56,11 @@ GameResult MyGameManager::run(
 
    allTanksSorted_ = sortAllTanks(p1Tanks_, p2Tanks_); //for output file //TODO maybe inside run()
 
-   run(); //print results if verobose_ == true
-   //TODO try catch/ check res
+   run();   //print results if verobose_ == true
+   			//upadates final_result when done
+   //TODO try catch or check the int
 
-   ::std::unique_ptr<SatelliteView> final_s_view = std::make_unique<SatelliteViewImpl>();
-   //TODO understand where this created
-   boardAndVectoresToSatelliteView();
-
-
-  GameResult result{};
-   //TODO BUILD IT
+  GameResult result = std::move(final_result_);
 
    return result;
 
@@ -128,42 +124,69 @@ int MyGameManager::setalliteViewToBoardAndVectores(const SatelliteView& satellit
 
 int boardAndVectoresToSatelliteView() {
     //TODO
+    ::std::unique_ptr<SatelliteView> final_s_view = std::make_unique<SatelliteViewImpl>(/*add params*/); // or create an empty consstructor
+    //return setallite View? unq ptr? we create the impl' version and return the abstract version?
     return 0;
 }
 
 
 
+int MyGameManager::run() {
 
-int MyGameManager::run(const ::std::string& inputFile) {
+    if (verbose_) {
+		//create and name output file / screen in case of fail to open
+    	// Fourm specs: create the file in the working directory
+    	const std::string output_file_name = makeUniquePath();
+   		std::ofstream file(output_file_name);          // owns the file (if opened)
+   		if (!file) {
+    	  std::cerr << "Failed to open output file: " << output_file_name << "\n"
+       	       << "Printing results to the screen instead.\n";
+    	}
 
-    //TODO: checks for edge cases: empty board, no tanks etc
+   		// one variable to pass to all printers:
+   		std::ostream& output_path = file ? static_cast<std::ostream&>(file)
+                       	  : static_cast<std::ostream&>(std::cout);
+	}
 
-    //create and name output file / screen in case of fail to open
-    const std::string outputFileName = "output_" + inputFile;
-    std::ofstream file("../" + outputFileName);          // owns the file (if opened)
 
-    if (!file) {
-        std::cerr << "Failed to open output file: " << outputFileName << "\n"
-                  << "Printing results to the screen instead.\n";
-    }
 
-    // one variable to pass to all printers:
-    std::ostream& output_path = file ? static_cast<std::ostream&>(file)
-                             : static_cast<std::ostream&>(std::cout);
+	//check for edge cases
+   	if (map_width_ ==0 || map_height_ == 0) {
+          //technically there are no tanks for each player, so it's a tie
+          final_result_.winner = 0 ;//tie
+          final_result_.reason = GameResult::Reason::ALL_TANKS_DEAD;
+          final_result_.remaining_tanks = std::vector<size_t>(0, 0);
+          final_result_.gameState = //TODO return the same map we got
+          final_result_.rounds = 0;
+          //TODO print to file
+          return 0;
+   	}
+
+      if (max_steps_ == 0) {
+
+      }
+
+      if (num_shells_ == 0) {
+
+      }
+
+
+
+
 
 
     int stepCounter = 0;
     stepsLeftWhenShellsOver_ = STEPS_WHEN_SHELLS_OVER;
-    int p1Alive = 0;
-    int p2Alive = 0;
+    int num_of_alive_p1_tanks = 0;
+    int num_of_alive_p2_tanks = 0;
 
     //printToFile("=== Tank Game Start ==="); //this is for convenience, not for submitting
 
-    while (stepCounter < maxSteps_ && stepsLeftWhenShellsOver_ > 0) {
+    while (stepCounter < max_steps_ && stepsLeftWhenShellsOver_ > 0) {
         //printToFile("\n--- Step " + std::to_string(stepCounter) + " ---", output_path); //this is for convenience, not for submitting
 
         //cheking is first, to cover case of no tanks for one player or both, in the input setallite view
-        if (checkIfPlayerLostAllTanks(p1Alive, p2Alive)) {break;}  //this returns true if a player, or both, lost all of his tanks.
+        if (checkIfPlayerLostAllTanks(num_of_alive_p1_tanks, num_of_alive_p2_tanks)) {break;}  //this returns true if a player, or both, lost all of his tanks.
                                                                         //it also counts the alive tanks of each player, and keep it in p1Alive, p2Alive
         //reset "setWasKilledThisStep" for all tanks
         for (auto& t : p1Tanks_) {
@@ -239,7 +262,9 @@ int MyGameManager::run(const ::std::string& inputFile) {
          printRoundToFile(output_path);
     }
 
-    printGameResult(p1Alive, p2Alive, output_path);
+    printGameResult(num_of_alive_p1_tanks, num_of_alive_p2_tanks, output_path);
+
+    return 0;
 }
 
 ActionRequest MyGameManager::decideAction(Tank& tank, TankAlgorithm& algo){
@@ -666,6 +691,38 @@ template void GameManager::cleanupDestroyedObjects<Wall>(std::vector<std::unique
 template void GameManager::cleanupDestroyedObjects<Tank>(std::vector<std::unique_ptr<Tank>>&);
 template void GameManager::cleanupDestroyedObjects<Mine>(std::vector<std::unique_ptr<Mine>>&);
  */
+
+//make unique output name with a unique time stamp
+//Fourm specs: create a name with names of players + map name + unique time stamp
+std::string MyGameManager::makeUniquePath() {
+    using namespace std::chrono;
+    namespace fs = std::filesystem;
+
+    constexpr std::size_t NUM_DIGITS   = 9;                  // width to print
+    constexpr std::uint64_t NUM_DIGITS_P = 1'000'000'000ULL; // 10^9
+
+    // Try a few variants (time + i) to dodge a same-tick collision.
+    for (int i = 0; i < 100; ++i) {
+        // microsecond resolution is plenty; cast for a stable integer
+        auto now_us = time_point_cast<microseconds>(system_clock::now());
+        std::uint64_t ticks = static_cast<std::uint64_t>(now_us.time_since_epoch().count());
+
+        // Bounded, fixed-width numeric token (padded with leading zeros)
+        std::uint64_t token = (ticks + static_cast<std::uint64_t>(i)) % NUM_DIGITS_P;
+
+        std::ostringstream num;
+        num << std::setw(NUM_DIGITS) << std::setfill('0') << token;
+
+        std::string path = map_name_ + "_" + player1_name_ + "_" + player1_name_ + "_" + num.str() + ".txt";
+
+        // If it doesn't exist, we're good.
+        if (!fs::exists(path)) return path;
+    }
+
+    // Fallback: unbounded tick value (unique enough even if files exist)
+    auto now_us = time_point_cast<microseconds>(system_clock::now());
+    return map_name_ + "_" + player1_name_ + "_" + player1_name_ +  "_" + std::to_string(now_us.time_since_epoch().count()) + ".txt";
+}
 
 
 }

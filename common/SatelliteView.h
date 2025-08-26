@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 class SatelliteView {
 public:
     virtual ~SatelliteView() {}

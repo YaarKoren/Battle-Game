@@ -41,7 +41,7 @@ class GameResultPrinter {
 
   private:
 
-    //time helper function
+    //make unique output name with a unique time stamp
     static std::string makeUniquePath(std::string folder_path, std::string mode_name);
 
     //Comparative mode - helper functions and structs

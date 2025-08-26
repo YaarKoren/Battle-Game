@@ -9,6 +9,11 @@
 #include <xmmintrin.h>
 #include <cstdlib>
 #include <exception>
+#include <chrono>
+#include <fstream>
+#include <iomanip>   // <-- for setw, setfill
+#include <filesystem>
+
 
 #include "../common/AbstractGameManager.h"
 #include "../common/ActionRequest.h"
@@ -89,6 +94,8 @@ private:
     int boardAndVectoresToSatelliteView() const;
     int run();
 
+    GameResult final_result_;
+
     // Tank action handlers
     void handleMoveTankForward(UserCommon_207177197_301251571::Tank& tank);
     void handleMoveTankBack(UserCommon_207177197_301251571::Tank& tank);
@@ -137,6 +144,7 @@ private:
 
 
     // Output file functions
+    std::string makeUniquePath(); //make unique output name with a unique time stamp
     std::vector<UserCommon_207177197_301251571::Tank*> sortAllTanks(const std::vector<std::unique_ptr<UserCommon_207177197_301251571::Tank>>& p1Tanks,
                                     const std::vector<std::unique_ptr<UserCommon_207177197_301251571::Tank>>& p2Tanks);
     void printRoundToFile(std::ostream& output_path);
