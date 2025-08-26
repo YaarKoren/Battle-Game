@@ -29,7 +29,7 @@ Board::~Board() {
 
 void Board::addGameObject(GameObject* obj, Position pos)
 {
-    pos.wrap(width_, height_); //maybe not neeeded. note: the function gets a copy of "pos", so this does not change the original Position
+    pos.wrap(width_, height_); //maybe not needed. note: the function gets a copy of "pos", so this does not change the original Position
     // Board stores raw pointers — caller owns the unique_ptr
     grid[pos.getY()][pos.getX()].push_back(obj); // adds the object to the end of the vector at the specified cell; just store pointer, no ownership!
 }
@@ -43,7 +43,7 @@ void Board::addGameObject(GameObject* obj, Position pos)
 const std::vector<GameObject*>& Board::getObjectsAt(Position pos) const
 {
     pos.wrap(width_, height_); //maybe not needed. note: the function gets a copy of "pos", so this does not change the original Position
-    return grid[pos.getY()][pos.getX()]; // return the vector — empty or not — it's fine.
+    return grid[pos.getY()][pos.getX()]; // return the vector, empty or not (the caller handles it)
 
 }
 
@@ -56,7 +56,8 @@ void Board::removeAllAt(Position pos) {
 
 // REMOVE A SPECIFIC OBJECT IN A CELL'S VECTOR
 
-void Board::removeObject(GameObject* objToRemove, Position pos) {
+void Board::removeObject(GameObject* objToRemove, Position pos)
+{
     pos.wrap(width_, height_); //maybe not needed. note: the function gets a copy of "pos", so this does not change the original Position
     auto& cell = grid[pos.getY()][pos.getX()];
     cell.erase(
@@ -64,4 +65,15 @@ void Board::removeObject(GameObject* objToRemove, Position pos) {
             cell.end()
     );
 }
+
+void Board::clear()
+{
+    for (int y = 0; y < height_; ++y) {
+        for (int x = 0; x < width_; ++x) {
+            grid[y][x].clear();
+        }
+    }
 }
+
+}
+

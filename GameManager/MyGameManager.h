@@ -59,17 +59,21 @@ private:
     size_t map_height_;
     size_t num_shells_;
     size_t max_steps_;
-    string map_name;
+    string map_name_;
 
-    std::unique_ptr<Player> player1_;
-    std::unique_ptr<Player> player2_;
+    Player* player1_ = nullptr; // non-owning
+    Player* player2_ = nullptr; // non-owning
+    std::string player1_name_;
+    std::string player2_name_;
 
-    TankAlgorithmFactory player1_tank_algo_factory_;
-    TankAlgorithmFactory player2_tank_algo_factory_;
+
+    //TankAlgorithmFactory player1_tank_algo_factory_;
+    //TankAlgorithmFactory player2_tank_algo_factory_;
 
     UserCommon_207177197_301251571::Board board_;
     std::vector<std::unique_ptr<UserCommon_207177197_301251571::Wall>> walls_;
     std::vector<std::unique_ptr<UserCommon_207177197_301251571::Mine>> mines_;
+
     std::vector<std::unique_ptr<UserCommon_207177197_301251571::Shell>> shells_;
 
     std::vector<std::unique_ptr<UserCommon_207177197_301251571::Tank>> p1Tanks_;
@@ -83,13 +87,7 @@ private:
     //helper functions for assignemnt 3 (getting and returning SatelliteView)
     int setalliteViewToBoardAndVectores(const SatelliteView& satelliteView);
     int boardAndVectoresToSatelliteView() const;
-
-    int pre_run();
     int run();
-
-
-
-
 
     // Tank action handlers
     void handleMoveTankForward(UserCommon_207177197_301251571::Tank& tank);

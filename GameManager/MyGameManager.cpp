@@ -1,11 +1,4 @@
 #include "MyGameManager.h"
-
-using namespace UserCommon_207177197_301251571;
-
-namespace GameManager_207177197_301251571 {
-
-REGISTER_GAME_MANAGER(MyGameManager);
-
 #include <iostream>
 #include <fstream>
 #include <utility>
@@ -15,6 +8,13 @@ REGISTER_GAME_MANAGER(MyGameManager);
 #include <cstdlib>
 #include <exception>
 #include <optional>
+
+using namespace UserCommon_207177197_301251571;
+
+namespace GameManager_207177197_301251571 {
+
+REGISTER_GAME_MANAGER(MyGameManager);
+
 
 
 MyGameManager::MyGameManager(bool verbose) :  verbose_(verbose),
@@ -29,68 +29,114 @@ GameResult MyGameManager::run(
         Player& player1, string name1, Player& player2, string name2,
         TankAlgorithmFactory player1_tank_algo_factory,
         TankAlgorithmFactory player2_tank_algo_factory) {
-  //TODO
 
-  }
+   map_width_ = map_width;
+   map_height_ = map_height;
+   num_shells_ = num_shells;
+   max_steps_ = max_steps;
+   map_name_ = map_name;
+   if (setalliteViewToBoardAndVectores(map)) { //sets board_, p1Tanks_, p2Tanks_, walls_, mines_
+     //error
+   }
 
-int setalliteViewToBoardAndVectores(const SatelliteView& satelliteView){
-    //TODO
+   player1_ = &player1;
+   player2_ = &player2;
+   player1_name_ = std::move(name1);
+   player2_name_ = std::move(name2);
 
-    board_ = std::move(*board);
+   //set tank algorithm for each tank
+   for (auto& t: p1Tanks_) {
+        t->setAlgorithm( player1_tank_algo_factory(t->getPlayerId(), t->getId()) );
+   }
 
-    boardWidth_ = board_.getWidth();
-    boardHeight_ = board_.getHeight();
+    for (auto& t: p2Tanks_) {
+        t->setAlgorithm( player2_tank_algo_factory(t->getPlayerId(), t->getId()) );
+   }
 
-    maxSteps_ = maxSteps;
-    numShells_ = numShells;
+   allTanksSorted_ = sortAllTanks(p1Tanks_, p2Tanks_); //for output file //TODO maybe inside run()
 
-    walls_ = std::move(walls);
-    mines_ = std::move(mines);
+   run(); //print results if verobose_ == true
+   //TODO try catch/ check res
 
-    p1Tanks_ = p1Tanks;
-    p2Tanks_ = p2Tanks;
+   ::std::unique_ptr<SatelliteView> final_s_view = std::make_unique<SatelliteViewImpl>();
+   //TODO understand where this created
+   boardAndVectoresToSatelliteView();
 
-  return 0;
+
+  GameResult result{};
+   //TODO BUILD IT
+
+   return result;
+
 }
+
+int MyGameManager::setalliteViewToBoardAndVectores(const SatelliteView& satelliteView){
+
+	// ensure sizes match your stored dims
+    // assert(map_width_  == satelliteView.width()); //no such method in the interface
+    // assert(map_height_ == satelliteView.height()); //no such method in the interface
+
+    // clear previous state
+    board_.clear();
+    walls_.clear(); mines_.clear(); p1Tanks_.clear(); p2Tanks_.clear();
+
+    //go thru all entries, get the char
+	// Birth order: TOP->BOTTOM (y outer), LEFT->RIGHT (x inner)
+    int tankIdCounter_1 = 0;
+    int tankIdCounter_2 = 0;
+
+     for (size_t y = 0; y < map_height_; y++) {
+       for (size_t x = 0; x < map_width_; x++) {
+         Position pos(x, y);
+        char ch = satelliteView.getObjectAt(x, y);
+
+         switch (ch) {
+            case '#': { // wall
+                auto obj = std::make_unique<Wall>(pos);
+                board_.addGameObject(obj.get(), pos);       // board is non-owning
+                walls_.push_back(std::move(obj));           // GM owns
+                break;
+            }
+            case '@': { // mine
+                auto obj = std::make_unique<Mine>(pos);
+                board_.addGameObject(obj.get(), pos);
+                mines_.push_back(std::move(obj));
+                break;
+            }
+            case '1': { // player 1 tank
+                auto obj = std::make_unique<Tank>(pos, Direction::Right, 1, ++ tankIdCounter_1);
+                board_.addGameObject(obj.get(), pos);
+                p1Tanks_.push_back(std::move(obj));
+                break;
+            }
+            case '2': { // player 2 tank
+                auto obj = std::make_unique<Tank>(pos, Direction::Left, 2, ++ tankIdCounter_2);
+                board_.addGameObject(obj.get(), pos);
+                p2Tanks_.push_back(std::move(obj));
+                break;
+            }
+            default: //any other char, includin empty space and invalid chars - A decision we made about handling invalid chars
+                // empty cell; do nothing
+                break;
+            }
+        }
+    }
+    return 0;
+}
+
+
 
 int boardAndVectoresToSatelliteView() {
     //TODO
     return 0;
 }
 
-//pre run: read board + handle errors, create Players and Tank Algothrims
-int MyGameManager::pre_run(const ::std::string& inputFile) {
-    if (setalliteViewToBoardAndVectores == 1){
-      //error
-      }
-      //sucess
-      //continue
 
-    allTanksSorted_ = sortAllTanks(p1Tanks_, p2Tanks_);
-
-    //---1) create tanks algorithms
-    for (size_t i = 0; i < p1Tanks_.size(); ++i) {
-        auto algo = tankFactory_->create(1, static_cast<int>(i));
-        p1Tanks_[i]->setAlgorithm(std::make_unique<MyTankAlgorithm>(
-                std::move(algo), 1, static_cast<int>(i)));
-    }
-
-    for (size_t i = 0; i < p2Tanks_.size(); ++i) {
-        auto algo = tankFactory_->create(2, static_cast<int>(i));
-        p2Tanks_[i]->setAlgorithm(std::make_unique<MyTankAlgorithm>(
-                std::move(algo), 2, static_cast<int>(i)));
-    }
-
-    //---2) create Players
-    player1_ = playerFactory_->create(1, boardWidth_, boardHeight_, maxSteps_, numShells_);
-    player2_ = playerFactory_->create(2, boardWidth_, boardHeight_, maxSteps_, numShells_);
-
-
-    return 0;
-}
 
 
 int MyGameManager::run(const ::std::string& inputFile) {
+
+    //TODO: checks for edge cases: empty board, no tanks etc
 
     //create and name output file / screen in case of fail to open
     const std::string outputFileName = "output_" + inputFile;

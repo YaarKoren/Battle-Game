@@ -20,7 +20,9 @@ namespace UserCommon_207177197_301251571 {
 class Board {
 private:
     int width_, height_;
-    std::vector<std::vector<std::vector<GameObject*>>> grid;
+
+    std::vector<std::vector<std::vector<GameObject*>>> grid; // each entry of the matrix, holds of a vector of GameObject*,
+                                                            //to support multiple GameObjects in the entry (i.e. a mine and a shell)
 
 public:
     Board(int w, int h);
@@ -42,19 +44,23 @@ public:
     //Getters
     int getWidth() const { return width_; }
     int getHeight() const { return height_; }
+    const std::vector<GameObject*>& getObjectsAt(Position pos) const;
+
 
     void addGameObject(GameObject* obj, Position pos);
-    const std::vector<GameObject*>& getObjectsAt(Position pos) const;
     void removeAllAt(Position pos);
+
     void removeObject(GameObject* objToRemove, Position pos);
 
+    /*
     bool isWall(Position pos) const {
         // Returns true if the cell at (x,y) contains a wall
         return getObjectsAt(pos).front()->getSymbol() == '#'; //TODO: check this, cuz the board should have pointer to Game Objects and not chars
     }
+    */
 
     //void cleanDestroyedWalls();
-    //void clear();
+    void clear();
 
 
 };
