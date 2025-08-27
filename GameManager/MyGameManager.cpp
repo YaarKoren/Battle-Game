@@ -39,7 +39,7 @@ GameResult MyGameManager::run(
 
 	satelliteViewToBoardAndVectores(map);  //sets board_, p1Tanks_, p2Tanks_, walls_, mines_
                                            // throws an error in case of out of bound access - that means there is a mismathc between the Satellite view and the dims
-   									       //Simulator (aka caller) should catch it - TODO: MAKE SURE
+   									       //Simulator (aka caller) should catch it
 
    player1_ = &player1;
    player2_ = &player2;
@@ -55,13 +55,12 @@ GameResult MyGameManager::run(
         t->setAlgorithm( player2_tank_algo_factory(t->getPlayerId(), t->getId()) );
    }
 
-   allTanksSorted_ = sortAllTanks(p1Tanks_, p2Tanks_); //for output file //TODO maybe inside run()
-
+   allTanksSorted_ = sortAllTanks(p1Tanks_, p2Tanks_); //for output file
 
    run();   //upadates final_result_ when Game is done
    			//prints results if verobose_ == true
    			//throws an error TODO: when
-   			//Simulator (aka caller) should catch it - TODO: MAKE SURE
+   			//Simulator (aka caller) should catch it
 
   GameResult result = std::move(final_result_);
 
@@ -158,7 +157,7 @@ void MyGameManager::run() {
     std::vector<std::vector<char>> char_grid(map_height_, std::vector<char>(map_width_, ' '));
 
 	//check for edge cases
-   	if (map_width_ ==0 || map_height_ == 0) {
+   	if (map_width_ == 0 || map_height_ == 0) {
           //technically there are no tanks for each player, so it's a tie
           final_result_.winner = 0 ;//tie
           final_result_.reason = GameResult::Reason::ALL_TANKS_DEAD;
@@ -171,12 +170,10 @@ void MyGameManager::run() {
 
           return;
    	}
-    if (max_steps_ == 0) {
-          checkIfPlayerLostAllTanks(num_of_alive_p1_tanks, num_of_alive_p2_tanks);
-          if (num_of_alive_p1_tanks > num_of_alive_p2_tanks) final_result_.winner = 1;
-          else if (num_of_alive_p1_tanks < num_of_alive_p2_tanks) final_result_.winner = 2;
-          else final_result_.winner = 0;
+    if (max_steps_ == 0) { //as long as both players still have tanks, we treat this as tie
+ 		  final_result_.winner = 0;
           final_result_.reason = GameResult::Reason::MAX_STEPS;
+          checkIfPlayerLostAllTanks(num_of_alive_p1_tanks, num_of_alive_p2_tanks); //updates values ; we know both playres still have tanks, cuz otherwise we would not get here
           final_result_.remaining_tanks = {num_of_alive_p1_tanks, num_of_alive_p1_tanks};
           board_.boardToCharGrid(char_grid); //updates char_grid
           final_result_.gameState = std::make_unique<SatelliteViewImpl>(char_grid);
@@ -187,8 +184,6 @@ void MyGameManager::run() {
 
           return;
     }
-
-    //TODO: if both?
 
     //----------------------------------------------------------------------------------------------------
 
@@ -203,7 +198,7 @@ void MyGameManager::run() {
 
         //cheking is first, to cover case of no tanks for one player or both, in the input setallite view
         if (checkIfPlayerLostAllTanks(num_of_alive_p1_tanks, num_of_alive_p2_tanks)) {break;}  //this returns true if a player, or both, lost all of his tanks.
-                                                                        //it also counts the alive tanks of each player, and keep it in p1Alive, p2Alive
+                                                                        					   //it also counts the alive tanks of each player, and keep it in p1Alive, p2Alive
         //reset "setWasKilledThisStep" for all tanks
         for (auto& t : p1Tanks_) {
             t->setWasKilledThisStep(false);

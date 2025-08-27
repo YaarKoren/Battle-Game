@@ -138,8 +138,6 @@ private:
     std::vector<UserCommon_207177197_301251571::Shell*> getShellPtrs() const;
     std::vector<UserCommon_207177197_301251571::Mine*> getMinePtrs() const;
 
-    //more helper functions
-    static void printToFile(const std::string& message, std::ostream& output_path);
 
 
     // GameResult and printing to output file - helper functions
@@ -149,7 +147,6 @@ private:
     void printRoundToFile(std::ostream& output_path);
     void setGameResultBesideSatellite(const size_t& p1Alive, const size_t& p2Alive, const int& stepCounter);
     void printGameResult(const size_t p1Alive, const size_t p2Alive, std::ostream& output_path) const;
-    bool checkIfPlayerLostAllTanks(size_t& p1Alive, size_t& p2Alive);
     static std::string actionRequestToString(ActionRequest action);
 
     void printPlayer1Won(const size_t p1Alive, std::ostream& output_path) const;
@@ -158,6 +155,9 @@ private:
     void printTieZeroShells(std::ostream& output_path) const;
     void printTieReacehedMaxSteps(const size_t p1Alive, const size_t p2Alive, std::ostream& output_path) const;
 
+    //more helper functions
+    static void printToFile(const std::string& message, std::ostream& output_path);
+	bool checkIfPlayerLostAllTanks(size_t& p1Alive, size_t& p2Alive);
 };
 
 }
