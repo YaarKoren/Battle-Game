@@ -621,42 +621,31 @@ std::vector<Tank*> MyGameManager::sortAllTanks(const std::vector<std::unique_ptr
     return allTanks;
 }
 
-//TODO chek this
-void MyGameManager::printRoundToFile(std::ostream& output_path) {
-    std::vector<std::string> actionStrs;
-    actionStrs.reserve(allTanksSorted_.size());
-    bool allDoNothing = true;
-
+void MyGameManager::printRoundToFile(std::ostream& output_path)
+{
     for (size_t i = 0; i < allTanksSorted_.size(); ++i) {
         Tank* tank = allTanksSorted_[i];
-        std::string actionStr;
 
-        ActionRequest next = tank->getNextAction();
-        actionStr = actionRequestToString(next);
+        if (tank->isDestroyed()) {
+            output_path << "killed";
+        } else {
+            std::string actionStr = actionRequestToString( (tank->getNextAction()) );
 
-        if (tank->getWasLastActionIgnored())
-            actionStr += " (ignored)";
-        if (tank->getWasKilledThisStep())
-            actionStr += " (killed)";
+            if (tank->getWasLastActionIgnored())
+                actionStr += " (ignored)";
+            if (tank->getWasKilledThisStep())
+                actionStr += " (killed)";
 
-        if (next != ActionRequest::DoNothing && next != ActionRequest::GetBattleInfo)
-            allDoNothing = false;
-        if (tank->getWasLastActionIgnored() || tank->getWasKilledThisStep())
-            allDoNothing = false;
+            output_path << actionStr;
+        }
 
-        actionStrs.push_back(std::move(actionStr));
+        if (i < allTanksSorted_.size() - 1) //to print ", " in between tanks and not after the last one
+            output_path << ", ";
     }
 
-    if (allDoNothing) {
-        return;
-    }
-
-    for (size_t i = 0; i < actionStrs.size(); ++i) {
-        output_path << actionStrs[i];
-        if (i + 1 < actionStrs.size()) output_path << " ";
-    }
-   output_path << "\n";
+    output_path << "\n";
 }
+
 
 void MyGameManager::printGameResult(size_t p1Alive,size_t p2Alive, std::ostream& output_path) {
     if (p1Alive > 0 && p2Alive == 0) {
