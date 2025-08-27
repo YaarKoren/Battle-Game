@@ -9,22 +9,22 @@ namespace UserCommon_207177197_301251571
         Position() : x_(0), y_(0) {}
 
         // Param constructor (optional)
-        Position(int x, int y) : x_(x), y_(y) {}
+        Position(size_t x, size_t y) : x_(x), y_(y) {}
 
         // Getters
-        int getX() const { return x_; }
-        int getY() const { return y_; }
+        size_t getX() const { return x_; }
+        size_t getY() const { return y_; }
 
         // Setters
-        void setX(int x) { x_ = x; }
-        void setY(int y) { y_ = y; }
+        void setX(size_t x) { x_ = x; }
+        void setY(size_t y) { y_ = y; }
 
         // Set both
-        void set(int x, int y) { x_ = x; y_ = y; }
+        void set(size_t x, size_t y) { x_ = x; y_ = y; }
 
         // Wrap around board dimensions
         // Wrap around board dimensions (safe for negatives and large values)
-        void wrap(int boardWidth, int boardHeight) {
+        void wrap(const size_t boardWidth, const size_t boardHeight) {
             x_ = ((x_ % boardWidth) + boardWidth) % boardWidth;
             y_ = ((y_ % boardHeight) + boardHeight) % boardHeight;
         }
@@ -42,7 +42,7 @@ namespace UserCommon_207177197_301251571
         }
 
     private:
-        int x_;
-        int y_;
+        size_t x_;
+        size_t y_;
     };
 }
