@@ -6,8 +6,12 @@ namespace UserCommon_207177197_301251571
         : board_(boardData) {}
 
     char SatelliteViewImpl::getObjectAt(size_t x, size_t y) const {
-        if (y >= board_.size() || x >= board_[y].size()) {
-            return '&'; // Out of bounds
+        // First check y, before accessing board_[y]
+        if (y >= board_.size()) {
+            return '&';
+        }
+        if (x >= board_[y].size()) {
+            return '&';
         }
         return board_[y][x];
     }
