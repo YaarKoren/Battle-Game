@@ -122,7 +122,7 @@ int MySimulator::run() //int cuz we want the program to always finish gracefully
 }
 
 
-void MySimulator::runComparative(std::ostringstream& oss) const {
+void MySimulator::runComparative(std::ostringstream& oss) {
     // --- 0) Load the map snapshot and params from map file
     std::string map_name;
     size_t map_width;
@@ -173,7 +173,7 @@ void MySimulator::runComparative(std::ostringstream& oss) const {
 
 
 
-void MySimulator::runCompetitive(std::ostringstream& oss) const {
+void MySimulator::runCompetitive(std::ostringstream& oss) {
     // --- 0) dlopen Game Manager .so file (auto-registration happens here) ---
     std::unique_ptr<AbstractGameManager> GM;
     load_and_validate_competition(GM); //throws an error on failure to open file / load / registrate
@@ -296,10 +296,8 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
 // If the SO is the same path as a previously-loaded one, don't dlopen again;
 // just return the existing entry index.
 // Validate the loading and registration, throws an error on failure to open file / load / registrate
- size_t MySimulator::loadAlgoAndPlayerAndGetIndex(
-    const std::string& so_path,
-    std::vector<std::unique_ptr<SharedLib>>& open_libs // keep handles alive
-) {
+ size_t MySimulator::loadAlgoAndPlayerAndGetIndex(const std::string& so_path)
+{
     auto& reg = AlgorithmRegistrar::getAlgorithmRegistrar();
 
     // If we already have an entry with the same name, reuse it.
@@ -318,7 +316,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
     // PlayerRegistration/TankAlgorithmRegistration constructors,
     // which add factories to the *last* entry we just created.
     try {
-        open_libs.emplace_back(std::make_unique<SharedLib>(so_path));
+        algo_libs_.emplace_back(std::make_unique<SharedLib>(so_path));
     } catch (const std::exception& e) {
         reg.removeLast(); // rollback empty slot
         throw std::runtime_error(std::string("Failed to open Algorithm .so file\n") + e.what());  // with the dlopen error text
@@ -344,10 +342,8 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
 // If the SO is the same path as a previously-loaded one, don't dlopen again;
 // just return the existing entry index.
 // Validate the loading and registration, throw an error on failure to load/registrate
- size_t MySimulator::loadGameManagerAndGetIndex(
-    const std::string& so_path,
-    std::vector<std::unique_ptr<SharedLib>>& open_libs // keep handles alive
-) {
+ size_t MySimulator::loadGameManagerAndGetIndex(const std::string& so_path)
+{
     auto& reg = GameManagerRegistrar::getGameManagerRegistrar();
 
     // If we already have an entry with the same name, reuse it.
@@ -366,7 +362,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
     // GameManagerRegistration constructors,
     // which add factories to the *last* entry we just created.
     try {
-        open_libs.emplace_back(std::make_unique<SharedLib>(so_path));
+        GM_libs_.emplace_back(std::make_unique<SharedLib>(so_path));
     } catch (const std::exception& e) {
         reg.removeLast(); // rollback empty slot
         throw std::runtime_error (std::string("Failed to open Game Manager .so file\n") + e.what());  // with the dlopen error text
@@ -404,15 +400,13 @@ std::vector<std::string> MySimulator::getSoFilesList(const std::string& dir_path
 //no need of std::ostringstream& oss, cuz can't have recoverable errors here
 void MySimulator::load_and_validate_comparative(std::unique_ptr<Player>& player1, std::unique_ptr<Player>& player2,
       TankAlgorithmFactory& p1_algo_factory,  TankAlgorithmFactory& p2_algo_factory,
-       const size_t map_width, const size_t map_height, const size_t max_steps, const size_t num_shells) const
+       const size_t map_width, const size_t map_height, const size_t max_steps, const size_t num_shells)
 {
-    std::vector<std::unique_ptr<SharedLib>> algo_libs; // TankAlgo+Player .so handles
-    // Keep SO handles alive for the entire match (RAII)
-    algo_libs.reserve(2);
 
+    algo_libs_.reserve(2);
 
-    const size_t idx1 = loadAlgoAndPlayerAndGetIndex(algo1SO, algo_libs); //throws an error on failure to open file / load / registrate
-    const size_t idx2 = loadAlgoAndPlayerAndGetIndex(algo2SO, algo_libs); //throws an error on failure to open file / load / registrate
+    const size_t idx1 = loadAlgoAndPlayerAndGetIndex(algo1SO); //throws an error on failure to open file / load / registrate
+    const size_t idx2 = loadAlgoAndPlayerAndGetIndex(algo2SO); //throws an error on failure to open file / load / registrate
 
     //Grab the two entries (we only need them by iterator; no private types leak)
     //it1, it2 are std::vector<AlgorithmAndPlayerFactories>::const_iterator.
@@ -439,7 +433,7 @@ void MySimulator::load_and_validate_comparative(std::unique_ptr<Player>& player1
 }
 
 
-void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::vector<GMObjectAndName>& GMs) const
+void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::vector<GMObjectAndName>& GMs)
 {
     //get so files from folder
     std::vector<std::string> gm_so_paths = getSoFilesList(managersFolder);
@@ -454,19 +448,14 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
 
     const size_t gm_so_paths_num = gm_so_paths.size();
 
-
-
     //load and validate
-    std::vector<std::unique_ptr<SharedLib>> GM_libs; // TankAlgo+Player .so handles
-    // Keep SO handles alive for the entire match (RAII)
-
-    GM_libs.reserve(gm_so_paths_num);
+    GM_libs_.reserve(gm_so_paths_num);
 
     std::vector<size_t> indices;
 
     for (const auto& so : gm_so_paths) {
         try {
-            size_t idx = loadGameManagerAndGetIndex(so, GM_libs);
+            size_t idx = loadGameManagerAndGetIndex(so);
             indices.push_back(idx);
         } catch (const std::exception& e) {
             //add to oss (=input_errors file) the info about the error; it includes the file path (see implementation of SharedLib)
@@ -578,14 +567,13 @@ void MySimulator::runGameAndKeepScore(const size_t l, const int opp, std::vector
 
 
 //no need of std::ostringstream& oss, cuz can't have recoverable errors here
-void MySimulator::load_and_validate_competition(std::unique_ptr<AbstractGameManager>& GM) const
+void MySimulator::load_and_validate_competition(std::unique_ptr<AbstractGameManager>& GM)
 {
     size_t index = 0;
-    std::vector<std::unique_ptr<SharedLib>> gm_libs; //Game Manager .so handles
-    // Keep SO handles alive for the entire match (RAII)
-    //create a vector, even thought it's only one so file, cuz this is what out helper func expects to get
 
-    index = loadGameManagerAndGetIndex(managerPath, gm_libs); //throws an error on failure to open file / load / registrate
+    //we usr vector gm_libs_, even thought it's only one so file, for convenience (one member, one function, for both comparative and competition mode)
+
+    index = loadGameManagerAndGetIndex(managerPath); //throws an error on failure to open file / load / registrate
     //Grab the entry (we only need them by iterator; no private types leak)
     //it is std::vector<GMFactoryNamePair>::const_iterator.
     //after advancing, writing "it" is like writing: GMReg.GMFactories[idx] (not exactly, but kind of)
@@ -596,7 +584,7 @@ void MySimulator::load_and_validate_competition(std::unique_ptr<AbstractGameMana
     GM = it->createGameManager(verbose_);
 }
 
-void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::vector<AlgoAndScore>& algos_and_scores) const
+void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::vector<AlgoAndScore>& algos_and_scores)
 {
     std::vector<size_t> indices;
 
@@ -611,14 +599,12 @@ void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::ve
     }
 
     //load and validate
-    std::vector<std::unique_ptr<SharedLib>> algos_libs; // TankAlgo+Player .so handles
-    // Keep SO handles alive for the entire match (RAII)
-    algos_libs.reserve(algos_so_paths_num);
+    algo_libs_.reserve(algos_so_paths_num);
 
     for (const auto& so : algos_so_paths) {
         try
         {
-            size_t idx = loadAlgoAndPlayerAndGetIndex(so, algos_libs);
+            size_t idx = loadAlgoAndPlayerAndGetIndex(so);
             indices.push_back(idx);
         }
         catch (const std::exception& e)

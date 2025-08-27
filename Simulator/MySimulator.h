@@ -58,9 +58,13 @@ private:
     std::string managerPath;
     std::string algosFolder;
 
+    // Keep .so handles alive for the entire match (RAII)
+    std::vector<std::unique_ptr<SharedLib>> algo_libs_; // TankAlgo+Player .so handles
+    std::vector<std::unique_ptr<SharedLib>> GM_libs_; // Game Manager .so handles
 
-    void runComparative(std::ostringstream& oss) const;
-    void runCompetitive(std::ostringstream& oss) const;
+
+    void runComparative(std::ostringstream& oss);
+    void runCompetitive(std::ostringstream& oss);
 
     //general helper functions
     void parse_map(std::ostringstream& oss, std::string& map_name, size_t& map_width, size_t& map_height, size_t& max_steps, size_t& num_shells,
@@ -69,10 +73,8 @@ private:
 
     //general helper functions - so files loading
     static std::string getCleanFileName(const std::string& path);
-    static size_t loadAlgoAndPlayerAndGetIndex(const std::string& so_path,
-        std::vector<std::unique_ptr<SharedLib>>& open_libs);
-    static size_t loadGameManagerAndGetIndex(const std::string& so_path,
-        std::vector<std::unique_ptr<SharedLib>>& open_libs);
+    size_t loadAlgoAndPlayerAndGetIndex(const std::string& so_path);
+    size_t loadGameManagerAndGetIndex(const std::string& so_path);
     static std::vector<std::string> getSoFilesList(const std::string& dir_path);
 
 
@@ -80,15 +82,15 @@ private:
     //comparative mode helper functions - so files loading
     void load_and_validate_comparative(std::unique_ptr<Player>& player1, std::unique_ptr<Player>& player2,
                                            TankAlgorithmFactory& p1_algo_factory, TankAlgorithmFactory& p2_algo_factory,
-                                           size_t map_width, size_t map_height, size_t max_steps, size_t num_shells) const;
+                                           size_t map_width, size_t map_height, size_t max_steps, size_t num_shells);
 
-    void load_and_validate_comparative(std::ostringstream& oss, std::vector<GMObjectAndName>& GMs) const;
+    void load_and_validate_comparative(std::ostringstream& oss, std::vector<GMObjectAndName>& GMs);
 
 
 
     //competition mode  helper functions
-    void load_and_validate_competition(std::unique_ptr<AbstractGameManager>& GM) const;
-    void load_and_validate_competition(std::ostringstream& oss, std::vector<AlgoAndScore>& algos_and_scores) const;
+    void load_and_validate_competition(std::unique_ptr<AbstractGameManager>& GM);
+    void load_and_validate_competition(std::ostringstream& oss, std::vector<AlgoAndScore>& algos_and_scores);
     void read_maps(std::ostringstream& oss, std::vector<MapParser::MapArgs>& maps_data) const;
 
     static std::vector<std::string> getFilesList(const std::string& dir_path);
