@@ -54,8 +54,8 @@ public:
 
     bool getVerbose () const {return verbose_;}
 
-    static constexpr int STEPS_WHEN_SHELLS_OVER = 40;
-    static constexpr int SHELL_MOVES_PER_STEP = 2;
+    static constexpr size_t STEPS_WHEN_SHELLS_OVER = 40;
+    static constexpr size_t SHELL_MOVES_PER_STEP = 2;
 
 private:
     bool verbose_;
@@ -85,9 +85,9 @@ private:
     std::vector<std::unique_ptr<UserCommon_207177197_301251571::Tank>> p2Tanks_;
     std::vector<UserCommon_207177197_301251571::Tank*> allTanksSorted_;
 
-    int stepsLeftWhenShellsOver_ = STEPS_WHEN_SHELLS_OVER;
-    int shellMovesPerStep_ = SHELL_MOVES_PER_STEP;
-    //int stepCounter_ = 0; //we use local var in the run() function instead
+    size_t stepsLeftWhenShellsOver_ = STEPS_WHEN_SHELLS_OVER;
+   	size_t shellMovesPerStep_ = SHELL_MOVES_PER_STEP;
+    //size_t stepCounter_ = 0; //we use local var in the run() function instead
 
     //helper functions for assignemnt 3 (getting and returning SatelliteView)
     void satelliteViewToBoardAndVectores(const SatelliteView& satelliteView);
@@ -111,7 +111,7 @@ private:
 
 
     // Helper functions
-    ActionRequest decideAction(UserCommon_207177197_301251571::Tank& t, TankAlgorithm& algo);
+    ActionRequest decideAction(UserCommon_207177197_301251571::Tank& t);
     int getTotalShellsLeft() const;
     void countersHandler(UserCommon_207177197_301251571::Tank& tank);
     void handleAutoMoveTankBack(UserCommon_207177197_301251571::Tank& tank);

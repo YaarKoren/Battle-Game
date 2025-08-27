@@ -189,7 +189,7 @@ void MyGameManager::run() {
 
     if (num_shells_ == 0) max_steps_ = STEPS_WHEN_SHELLS_OVER; //cuz we check if shlles are over only insdie the loop, after the first round
 
-    int stepCounter = 0;
+    size_t stepCounter = 0;
 
     //printToFile("=== Tank Game Start ==="); //this is for convenience, not for submitting
 
@@ -216,13 +216,13 @@ void MyGameManager::run() {
         //***deciding tanks actions***
         for (auto& t : p1Tanks_) {
             if (!t->isDestroyed()) {
-                ActionRequest action = decideAction(*t, *t->getAlgorithm());
+                ActionRequest action = decideAction(*t);
                 t->setNextAction(action);
             }
         }
         for (auto& t : p2Tanks_) {
             if (!t->isDestroyed()) {
-                ActionRequest action = decideAction(*t, *t->getAlgorithm());
+                ActionRequest action = decideAction(*t);
                 t->setNextAction(action);
             }
         }
@@ -238,7 +238,7 @@ void MyGameManager::run() {
         for (auto& t : p1Tanks_) if (!t->isDestroyed() && t->getNextAction() == ActionRequest::Shoot) handleShoot(*t);
         for (auto& t : p2Tanks_) if (!t->isDestroyed() && t->getNextAction() == ActionRequest::Shoot) handleShoot(*t);
 
-        for (int i = 0; i < shellMovesPerStep_; ++i) {
+        for (size_t i = 0; i < shellMovesPerStep_; ++i) {
             shellStep(); //collisions are handled inside this function
             cleanupDestroyedObjects(shells_);
             cleanupDestroyedObjects(walls_);
@@ -288,7 +288,7 @@ void MyGameManager::run() {
 //-----------------------------------------------------------------------------------------------------
 
 
-ActionRequest MyGameManager::decideAction(Tank& tank, TankAlgorithm& algo){
+ActionRequest MyGameManager::decideAction(Tank& tank){
 
     ::std::vector<Tank*> aliveTanks;
     for (const auto& t : p1Tanks_) {
@@ -375,7 +375,7 @@ void MyGameManager::handleAction(Tank& tank, ActionRequest action) {
         case ActionRequest::RotateRight45: handleRotateEighthRight(tank); break;
         case ActionRequest::RotateRight90: handleRotateFourthRight(tank); break;
         case ActionRequest::DoNothing: handleDoNothing(tank); break;
-        //default: std::cerr << "Error in handleAction: fall to default\n"; break; //should not happen!
+        default: throw std::runtime_error(std::string("Error in handleAction: fall to default\n")); break; //should not happen!
     }
 }
 
