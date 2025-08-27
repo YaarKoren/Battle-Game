@@ -266,8 +266,16 @@ int MyGameManager::run() {
         if (verbose_) printRoundToFile(output_path);
     }
 
-     if (verbose_) printGameResult(num_of_alive_p1_tanks, num_of_alive_p2_tanks, output_path);
-	//TODO update final_result
+    //--------------------------------------------------------------------------------------------------------------
+
+    //set final result + print if verbose_
+    setGameResultBesideSatellite(num_of_alive_p1_tanks, num_of_alive_p2_tanks, stepCounter);
+    //set Satellite View for result
+    board_.boardToCharGrid(char_grid); //does not change board_ ; changes only the char grid
+    final_result_.gameState = std::make_unique<SatelliteViewImpl>(char_grid);
+
+    if (verbose_) printGameResult(num_of_alive_p1_tanks, num_of_alive_p2_tanks, output_path);
+
     return 0;
 }
 
@@ -307,7 +315,6 @@ void MyGameManager::handleRequestBattleInfo(Tank& tank) {
         return;
     }
 
-    //TODO : CHANGE, ITS NOT THE FIRST ITS THE TOP + CAN BE BORAD TO SATELLITE
     std::vector<std::vector<char>> char_grid(map_height_, std::vector<char>(map_width_, ' '));
     //create a 2D char representation of the board
     board_.boardToCharGrid(char_grid); //does not change board_ ; changes only the char grid
@@ -640,8 +647,33 @@ void MyGameManager::printRoundToFile(std::ostream& output_path)
     output_path << "\n";
 }
 
+//Satellite is built directly inside the run() function
+ void MyGameManager::setGameResultBesideSatellite(const size_t& p1Alive, const size_t& p2Alive, const int& stepCounter){
+   if (p1Alive > 0 && p2Alive == 0) {
+     final_result_.winner = 1;
+     final_result_.reason = GameResult::Reason::ALL_TANKS_DEAD;
+    } else if (p2Alive > 0 && p1Alive == 0) {
+     final_result_.winner = 2;
+     final_result_.reason = GameResult::Reason::ALL_TANKS_DEAD;
+    } else if (p1Alive == 0 && p2Alive == 0) {
+     final_result_.winner = 0; //tie
+     final_result_.reason = GameResult::Reason::ALL_TANKS_DEAD;
+    } else if (stepsLeftWhenShellsOver_ >= STEPS_WHEN_SHELLS_OVER) {
+     final_result_.winner = 0; //tie
+     final_result_.reason = GameResult::Reason::ZERO_SHELLS;
+    } else {
+     final_result_.winner = 0; //tie
+     final_result_.reason = GameResult::Reason::MAX_STEPS;
+   }
 
-void MyGameManager::printGameResult(size_t p1Alive,size_t p2Alive, std::ostream& output_path) {
+    final_result_.remaining_tanks = {p1Alive, p2Alive}; // index 0 = player 1, etc.
+	//final_result_.gameStat - it's the Satellite View. It's built directly inside the run()
+    final_result_.rounds = stepCounter;
+
+ }
+
+
+void MyGameManager::printGameResult(const size_t p1Alive, const size_t p2Alive, std::ostream& output_path) const {
     if (p1Alive > 0 && p2Alive == 0) {
         output_path << "Player 1 won with " << p1Alive << " tanks still alive\n";
     } else if (p2Alive > 0 && p1Alive == 0) {

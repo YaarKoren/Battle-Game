@@ -87,11 +87,10 @@ private:
 
     int stepsLeftWhenShellsOver_ = STEPS_WHEN_SHELLS_OVER;
     int shellMovesPerStep_ = SHELL_MOVES_PER_STEP;
-    int stepCounter_ = 0;
+    //int stepCounter_ = 0; //we use local var in the run() function instead
 
     //helper functions for assignemnt 3 (getting and returning SatelliteView)
     int setalliteViewToBoardAndVectores(const SatelliteView& satelliteView);
-    int boardAndVectoresToSatelliteView() const;
     int run();
 
     GameResult final_result_;
@@ -143,14 +142,16 @@ private:
     static void printToFile(const std::string& message, std::ostream& output_path);
 
 
-    // GameResult and output file functions
+    // GameResult and printing to output file - helper functions
     std::string makeUniquePath(); //make unique output name with a unique time stamp
     std::vector<UserCommon_207177197_301251571::Tank*> sortAllTanks(const std::vector<std::unique_ptr<UserCommon_207177197_301251571::Tank>>& p1Tanks,
                                     const std::vector<std::unique_ptr<UserCommon_207177197_301251571::Tank>>& p2Tanks);
     void printRoundToFile(std::ostream& output_path);
-    void printGameResult(size_t p1Alive, size_t p2Alive, std::ostream& output_path);
+    void setGameResultBesideSatellite(const size_t& p1Alive, const size_t& p2Alive, const int& stepCounter);
+    void printGameResult(const size_t p1Alive, const size_t p2Alive, std::ostream& output_path) const;
     bool checkIfPlayerLostAllTanks(size_t& p1Alive, size_t& p2Alive);
     static std::string actionRequestToString(ActionRequest action);
+
 
 };
 
