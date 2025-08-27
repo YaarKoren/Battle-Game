@@ -10,13 +10,6 @@
 #include "Mine.h"
 #include "Shell.h"
 
-//those are not needed, cuz we use the abstract class
-/*
-#include "Shell.h"
-#include "Mine.h"
-#include "Wall.h"
-*/
-
 
 
 namespace UserCommon_207177197_301251571 {
@@ -44,7 +37,6 @@ public:
     Board(Board&&) noexcept            = default;
     Board& operator=(Board&&) noexcept = default;
 
-
     //Getters
     size_t getWidth() const { return width_; }
     size_t getHeight() const { return height_; }
@@ -55,13 +47,6 @@ public:
     void removeAllAt(Position pos);
 
     void removeObject(GameObject* objToRemove, Position pos);
-
-    /*
-    bool isWall(Position pos) const {
-        // Returns true if the cell at (x,y) contains a wall
-        return getObjectsAt(pos).front()->getSymbol() == '#'; //TODO: check this, cuz the board should have pointer to Game Objects and not chars
-    }
-    */
 
     //void cleanDestroyedWalls();
     void clear();
