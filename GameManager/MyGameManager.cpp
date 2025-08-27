@@ -114,7 +114,8 @@ int MyGameManager::setalliteViewToBoardAndVectores(const SatelliteView& satellit
                 p2Tanks_.push_back(std::move(obj));
                 break;
             }
-            default: //any other char, includin empty space and invalid chars - A decision we made about handling invalid chars
+              //TODO & CASE - ERROR
+            default: //any other char, including empty spaces and invalid chars - A decision we made about handling invalid chars
                 // empty cell; do nothing
                 break;
             }
@@ -307,18 +308,11 @@ void MyGameManager::handleRequestBattleInfo(Tank& tank) {
     }
 
     //TODO : CHANGE, ITS NOT THE FIRST ITS THE TOP + CAN BE BORAD TO SATELLITE
-    std::vector<std::vector<char>> view(map_height_, std::vector<char>(map_width_, ' '));
+    std::vector<std::vector<char>> char_grid(map_height_, std::vector<char>(map_width_, ' '));
     //create a 2D char representation of the board
-    for (size_t y = 0; y < map_height_; ++y) {
-        for (size_t x = 0; x < map_width_; ++x) {
-            const auto& objects = board_.getObjectsAt({(int)x, (int)y});
-            if (!objects.empty()) {
-                view[y][x] = objects.front()->getSymbol();
-            }
-        }
-    }
+    board_.boardToCharGrid(char_grid); //does not change board_ ; changes only the char grid
     //create a SatelliteViewImpl from it
-    SatelliteViewImpl satellite(view);
+    SatelliteViewImpl satellite(char_grid);
 
     //determine which player owns this tank
     int playerId = tank.getPlayerId();
