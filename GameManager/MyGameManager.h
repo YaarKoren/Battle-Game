@@ -152,6 +152,11 @@ private:
     bool checkIfPlayerLostAllTanks(size_t& p1Alive, size_t& p2Alive);
     static std::string actionRequestToString(ActionRequest action);
 
+    void printPlayer1Won(const size_t p1Alive, std::ostream& output_path) const;
+    void printPlayer2Won(const size_t p2Alive, std::ostream& output_path) const;
+	void printTieZeroTanks(std::ostream& output_path) const;
+    void printTieZeroShells(std::ostream& output_path) const;
+    void printTieReacehedMaxSteps(const size_t p1Alive, const size_t p2Alive, std::ostream& output_path) const;
 
 };
 

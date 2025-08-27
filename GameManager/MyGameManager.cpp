@@ -159,7 +159,10 @@ int MyGameManager::run() {
           final_result_.remaining_tanks = {num_of_alive_p1_tanks, num_of_alive_p1_tanks};
           final_result_.gameState = std::make_unique<SatelliteViewImpl>(char_grid); //empty
           final_result_.rounds = 0;
-          //TODO print to file
+
+          //print to file if verbose = true
+          if(verbose_) {printTieZeroTanks(output_path);}
+
           return 0;
    	}
     if (max_steps_ == 0) {
@@ -172,7 +175,10 @@ int MyGameManager::run() {
           board_.boardToCharGrid(char_grid); //updates char_grid
           final_result_.gameState = std::make_unique<SatelliteViewImpl>(char_grid);
           final_result_.rounds = 0;
-          //TODO print to file
+
+          //print to file if verbose = true
+          if(verbose_) {printTieReacehedMaxSteps(num_of_alive_p1_tanks, num_of_alive_p2_tanks, output_path);}
+
           return 0;
     }
 
@@ -647,7 +653,8 @@ void MyGameManager::printRoundToFile(std::ostream& output_path)
     output_path << "\n";
 }
 
-//Satellite is built directly inside the run() function
+//this funtion does not set final_result_.gameStat!!! (the Satellite View)
+//final_result_.gameStat is built directly inside the run() function
  void MyGameManager::setGameResultBesideSatellite(const size_t& p1Alive, const size_t& p2Alive, const int& stepCounter){
    if (p1Alive > 0 && p2Alive == 0) {
      final_result_.winner = 1;
@@ -672,27 +679,46 @@ void MyGameManager::printRoundToFile(std::ostream& output_path)
 
  }
 
-
+//call this after setting the game result
 void MyGameManager::printGameResult(const size_t p1Alive, const size_t p2Alive, std::ostream& output_path) const {
-    if (p1Alive > 0 && p2Alive == 0) {
-        output_path << "Player 1 won with " << p1Alive << " tanks still alive\n";
-    } else if (p2Alive > 0 && p1Alive == 0) {
-       output_path << "Player 2 won with " << p2Alive << " tanks still alive\n";
-    } else if (p1Alive == 0 && p2Alive == 0) {
-        output_path << "Tie, both players have zero tanks\n";
-    } else if (stepsLeftWhenShellsOver_ >= STEPS_WHEN_SHELLS_OVER) {
-        output_path << "Tie, both players have zero shells for <"
-                    << STEPS_WHEN_SHELLS_OVER << "> steps\n";
-    } else {
-        output_path << "Tie, reached max steps = " << max_steps_
-                    << ", player 1 has " << p1Alive
-                    << " tanks, player 2 has " << p2Alive << " tanks\n";
+    if (final_result_.winner == 1) {
+       printPlayer1Won(p1Alive, output_path);
+    } else if (final_result_.winner == 2) {
+      printPlayer2Won(p2Alive,output_path);
+    } else if (final_result_.winner == 0) { //tie
+      if (final_result_.reason == GameResult::Reason::ALL_TANKS_DEAD) {printTieZeroTanks(output_path);}
+      else if (final_result_.reason == GameResult::Reason::ZERO_SHELLS) {printTieZeroShells(output_path);}
+      else if (final_result_.reason == GameResult::Reason::MAX_STEPS) {printTieReacehedMaxSteps(p1Alive, p2Alive, output_path);}
     }
 }
 
-    //returns true if a player, or both, lost all of his tanks.
-    //else, returns false
-    //also count and update the number of tanks for each player
+void MyGameManager::printPlayer1Won(const size_t p1Alive, std::ostream& output_path) const {
+  output_path << "Player 1 won with " << p1Alive << " tanks still alive\n";
+}
+
+void MyGameManager::printPlayer2Won(const size_t p2Alive, std::ostream& output_path) const {
+  output_path << "Player 2 won with " << p2Alive << " tanks still alive\n";
+}
+
+void MyGameManager::printTieZeroTanks(std::ostream& output_path) const {
+    output_path << "Tie, both players have zero tanks\n";
+}
+
+void MyGameManager::printTieZeroShells(std::ostream& output_path) const {
+	   output_path << "Tie, both players have zero shells for <"
+                    << STEPS_WHEN_SHELLS_OVER << "> steps\n";
+}
+
+void MyGameManager::printTieReacehedMaxSteps(const size_t p1Alive, const size_t p2Alive, std::ostream& output_path) const{
+   output_path << "Tie, reached max steps = " << max_steps_
+                    << ", player 1 has " << p1Alive
+                    << " tanks, player 2 has " << p2Alive << " tanks\n";
+}
+
+
+//returns true if a player, or both, lost all of his tanks.
+//else, returns false
+//also counts and updates the number of tanks for each player
 bool MyGameManager::checkIfPlayerLostAllTanks(size_t& p1Alive, size_t& p2Alive) {
     p1Alive = std::count_if(p1Tanks_.begin(), p1Tanks_.end(),
                                   [](const std::unique_ptr<Tank>& t) { return !t->isDestroyed(); });
