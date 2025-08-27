@@ -66,7 +66,7 @@ public:
     //void cleanDestroyedWalls();
     void clear();
 
-    void Board::boardToCharGrid(std::vector<std::vector<char>> char_grid) const;
+    void Board::boardToCharGrid(std::vector<std::vector<char>>& char_grid) const;
 
     void Board::resize(size_t w, size_t h);
 

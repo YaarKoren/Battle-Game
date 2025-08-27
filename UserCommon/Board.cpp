@@ -71,29 +71,46 @@ void Board::clear()
     grid.clear(); //deletes also the rows and cols
 }
 
-//this function should help create a SatelliteView, thus according to assignment specs, the char chose in//case of multipile game objects in the enrty, is the most top one (i.e. shell is on top of a mine etc)
+//this function should help create a SatelliteView
+//specs: "For artillery shell, in case an artillery shell is in the air above a mine, the satellite sees the artillery shell and misses the mine"
+    //(this function handle only case of shells + some other object/objects.
+    //for other cases of multiple objects: those cases happens only fot a short time, before the two objects gets destroyed.
+    //creating the SatelliteView from the board does not happen during this short times. So, we don't handle those cases).
 //the caller is responsible to pass the char grid in the right size
-    //TODO it makes board knows the specifc game objects but maybe it's ok
-void Board::boardToCharGrid(std::vector<std::vector<char>> char_grid) const
+//(notice that this function is the reason Board has to know the specific game objects; can move this to Game Manager if it's better)
+void Board::boardToCharGrid(std::vector<std::vector<char>>& char_grid) const
 {
-    for (size_t y = 0; y < height_; ++y)
-    {
+    for (size_t y = 0; y < height_; ++y) {
         for (size_t x = 0; x < width_; ++x)
         {
-            //TODO
-            const auto& objects = grid[y][x];
+            const auto& cell = grid[y][x];
 
-            for (const auto& obj : objects) {
+            if (cell.empty()) {
+                char_grid[y][x] = ' ';
+                continue;
+            }
 
-                if (dynamic_cast<Wall*>(obj)) char_grid[y][x] = '#';
-                else if (dynamic_cast<Wall*>(obj)) char_grid[y][x] = '*';
-                //use get symbol
+            // Only overlap we handle: shell + mine.
+            const GameObject* any = nullptr;
+            const GameObject* shell = nullptr;
 
-
+            for (const GameObject* obj : cell) {
+                if (!obj) continue;
+                any = obj; // remember something in case there's no shell
+                if (dynamic_cast<const Shell*>(obj)) {
+                    shell = obj;      // shell wins if present
+                    break;            // no need to keep scanning
                 }
+            }
+
+            if (!any) {
+                char_grid[y][x] = ' '; // Empty cell → space
+            } else {
+                char_grid[y][x] = (shell ? shell : any)->getSymbol(); //shell wins; if there is no shell, other object gets to be shown
             }
         }
     }
+}
 
 void Board::resize(size_t w, size_t h) {
     width_ = w;
