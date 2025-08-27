@@ -71,7 +71,7 @@ void Board::clear()
     grid.clear(); //deletes also the rows and cols
 }
 
-//this function should help create a SetelliteView, thus according to assignment specs, the char chose in//case of multipile game objects in the enrty, is the most top one (i.e. shell is on top of a mine etc)
+//this function should help create a SatelliteView, thus according to assignment specs, the char chose in//case of multipile game objects in the enrty, is the most top one (i.e. shell is on top of a mine etc)
 //the caller is responsible to pass the char grid in the right size
     //TODO it makes board knows the specifc game objects but maybe it's ok
 void Board::boardToCharGrid(std::vector<std::vector<char>> char_grid) const
@@ -87,6 +87,9 @@ void Board::boardToCharGrid(std::vector<std::vector<char>> char_grid) const
 
                 if (dynamic_cast<Wall*>(obj)) char_grid[y][x] = '#';
                 else if (dynamic_cast<Wall*>(obj)) char_grid[y][x] = '*';
+                //use get symbol
+
+
                 }
             }
         }

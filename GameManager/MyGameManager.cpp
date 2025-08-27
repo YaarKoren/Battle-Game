@@ -38,6 +38,7 @@ GameResult MyGameManager::run(
    map_name_ = map_name;
    if (setalliteViewToBoardAndVectores(map)) { //sets board_, p1Tanks_, p2Tanks_, walls_, mines_
      //error
+     //TODO
    }
 
    player1_ = &player1;
@@ -58,7 +59,8 @@ GameResult MyGameManager::run(
 
    run();   //print results if verobose_ == true
    			//upadates final_result when done //TODO
-   //TODO try catch or check the int
+   //TODO try catch - IT THROWS
+   //MAYBE ALSO CHECK THE INT?
 
   GameResult result = std::move(final_result_);
 
@@ -320,16 +322,19 @@ void MyGameManager::handleRequestBattleInfo(Tank& tank) {
 
     //determine which player owns this tank
     int playerId = tank.getPlayerId();
-    Player* player = (playerId == 1) ? player1_.get() : player2_.get();
+    Player* player = (playerId == 1) ? player1_ : player2_;
 
     //let the player update the tank's algorithm with BattleInfo
     if (player) {
         if (!tank.getAlgorithm()) {
-            throw ::std::runtime_error (::std::string("Tank has no algorithm! Player: ") + tank.getPlayerId()
-                      +  ::std::string(", Tank ID: ") + tank.getId())
-
+           throw std::runtime_error (
+                  std::string("Tank has no algorithm! Player: ")
+                  + std::to_string(tank.getPlayerId())
+                  + std::string(", Tank ID: ")
+                  + std::to_string(tank.getId())
+           );
         }
-        player->updateTankWithBattleInfo(*tank.getAlgorithm(), satellite);
+       	player->updateTankWithBattleInfo(*tank.getAlgorithm(), satellite);
     }
 
     tank.setLastAction(ActionRequest::GetBattleInfo);
@@ -616,6 +621,7 @@ std::vector<Tank*> MyGameManager::sortAllTanks(const std::vector<std::unique_ptr
     return allTanks;
 }
 
+//TODO chek this
 void MyGameManager::printRoundToFile(std::ostream& output_path) {
     std::vector<std::string> actionStrs;
     actionStrs.reserve(allTanksSorted_.size());
@@ -626,11 +632,7 @@ void MyGameManager::printRoundToFile(std::ostream& output_path) {
         std::string actionStr;
 
         ActionRequest next = tank->getNextAction();
-        if (next == ActionRequest::GetBattleInfo) {
-            actionStr = ActionUtils::toString(ActionRequest::DoNothing);
-        } else {
-            actionStr = ActionUtils::toString(next);
-        }
+        actionStr = actionRequestToString(next);
 
         if (tank->getWasLastActionIgnored())
             actionStr += " (ignored)";
@@ -656,7 +658,7 @@ void MyGameManager::printRoundToFile(std::ostream& output_path) {
    output_path << "\n";
 }
 
-void MyGameManager::printGameResult(int p1Alive, int p2Alive, std::ostream& output_path) {
+void MyGameManager::printGameResult(size_t p1Alive,size_t p2Alive, std::ostream& output_path) {
     if (p1Alive > 0 && p2Alive == 0) {
         output_path << "Player 1 won with " << p1Alive << " tanks still alive\n";
     } else if (p2Alive > 0 && p1Alive == 0) {
@@ -729,5 +731,21 @@ std::string MyGameManager::makeUniquePath() {
     return map_name_ + "_" + player1_name_ + "_" + player1_name_ +  "_" + std::to_string(now_us.time_since_epoch().count()) + ".txt";
 }
 
+std::string MyGameManager::actionRequestToString(ActionRequest action){
+	std::string action_str;
+        switch (action) {
+          case ActionRequest::MoveForward: action_str = "MoveForward"; break;
+          case ActionRequest::MoveBackward: action_str = "MoveBackward"; break;
+          case ActionRequest::RotateLeft90: action_str = "RotateLeft90"; break;
+          case ActionRequest::RotateRight90: action_str = "RotateRight90"; break;
+          case ActionRequest::RotateLeft45: action_str = "RotateLeft45"; break;
+          case ActionRequest::RotateRight45: action_str = "RotateRight45"; break;
+          case ActionRequest::Shoot: action_str = "Shoot"; break;
+          case ActionRequest::GetBattleInfo: action_str = "GetBattleInfo"; break;
+          case ActionRequest::DoNothing: action_str = "DoNothing"; break;
+          default: action_str = "Unknown"; break;
+        }
+        return action_str;
+}
 
 }

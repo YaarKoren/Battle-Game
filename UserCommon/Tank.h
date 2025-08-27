@@ -10,11 +10,13 @@
 #include "MovingGameObject.h"
 #include "Position.h"
 #include "Direction.h"
-#include "Board.h"
+
 
 
 namespace UserCommon_207177197_301251571
+
 {
+    class Board;   // forward declare
     class Tank : public MovingGameObject {
     public:
         Tank(Position pos, Direction dir, int playerId, int Id);

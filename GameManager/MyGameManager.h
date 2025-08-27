@@ -150,6 +150,7 @@ private:
     void printRoundToFile(std::ostream& output_path);
     void printGameResult(size_t p1Alive, size_t p2Alive, std::ostream& output_path);
     bool checkIfPlayerLostAllTanks(size_t& p1Alive, size_t& p2Alive);
+    static std::string actionRequestToString(ActionRequest action);
 
 };
 
