@@ -90,8 +90,8 @@ private:
     //int stepCounter_ = 0; //we use local var in the run() function instead
 
     //helper functions for assignemnt 3 (getting and returning SatelliteView)
-    int setalliteViewToBoardAndVectores(const SatelliteView& satelliteView);
-    int run();
+    void satelliteViewToBoardAndVectores(const SatelliteView& satelliteView);
+    void run();
 
     GameResult final_result_;
 

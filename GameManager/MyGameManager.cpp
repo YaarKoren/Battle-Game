@@ -36,10 +36,10 @@ GameResult MyGameManager::run(
    num_shells_ = num_shells;
    max_steps_ = max_steps;
    map_name_ = map_name;
-   if (setalliteViewToBoardAndVectores(map)) { //sets board_, p1Tanks_, p2Tanks_, walls_, mines_
-     //error
-     //TODO
-   }
+
+	satelliteViewToBoardAndVectores(map);  //sets board_, p1Tanks_, p2Tanks_, walls_, mines_
+                                           // throws an error in case of out of bound access - that means there is a mismathc between the Satellite view and the dims
+   									       //Simulator (aka caller) should catch it - TODO: MAKE SURE
 
    player1_ = &player1;
    player2_ = &player2;
@@ -57,10 +57,11 @@ GameResult MyGameManager::run(
 
    allTanksSorted_ = sortAllTanks(p1Tanks_, p2Tanks_); //for output file //TODO maybe inside run()
 
-   run();   //print results if verobose_ == true
-   			//upadates final_result when done //TODO
-   //TODO try catch - IT THROWS
-   //MAYBE ALSO CHECK THE INT?
+
+   run();   //upadates final_result_ when Game is done
+   			//prints results if verobose_ == true
+   			//throws an error TODO: when
+   			//Simulator (aka caller) should catch it - TODO: MAKE SURE
 
   GameResult result = std::move(final_result_);
 
@@ -68,7 +69,7 @@ GameResult MyGameManager::run(
 
 }
 
-int MyGameManager::setalliteViewToBoardAndVectores(const SatelliteView& satelliteView){
+void MyGameManager::satelliteViewToBoardAndVectores(const SatelliteView& satelliteView){
 
 	// ensure sizes match your stored dims
     // assert(map_width_  == satelliteView.width()); //no such method in the interface
@@ -114,18 +115,23 @@ int MyGameManager::setalliteViewToBoardAndVectores(const SatelliteView& satellit
                 p2Tanks_.push_back(std::move(obj));
                 break;
             }
-              //TODO & CASE - ERROR
+            case '&': { //out of bound
+             	std::ostringstream oss;
+    			oss << "[Game Manager] Error in reading Satellite View: out of bounds at ("
+      		 		 << x << ", " << y << ")";
+    			throw std::runtime_error(oss.str());
+            }
+
             default: //any other char, including empty spaces and invalid chars - A decision we made about handling invalid chars
                 // empty cell; do nothing
                 break;
             }
         }
     }
-    return 0;
 }
 
 
-int MyGameManager::run() {
+void MyGameManager::run() {
 
 	//------------------------------------------------------------------------------------------------
 	//create and name output file / screen in case of fail to open
@@ -163,7 +169,7 @@ int MyGameManager::run() {
           //print to file if verbose = true
           if(verbose_) {printTieZeroTanks(output_path);}
 
-          return 0;
+          return;
    	}
     if (max_steps_ == 0) {
           checkIfPlayerLostAllTanks(num_of_alive_p1_tanks, num_of_alive_p2_tanks);
@@ -179,7 +185,7 @@ int MyGameManager::run() {
           //print to file if verbose = true
           if(verbose_) {printTieReacehedMaxSteps(num_of_alive_p1_tanks, num_of_alive_p2_tanks, output_path);}
 
-          return 0;
+          return;
     }
 
     //TODO: if both?
@@ -269,6 +275,7 @@ int MyGameManager::run() {
         }
 
         stepCounter++;
+
         if (verbose_) printRoundToFile(output_path);
     }
 
@@ -281,8 +288,6 @@ int MyGameManager::run() {
     final_result_.gameState = std::make_unique<SatelliteViewImpl>(char_grid);
 
     if (verbose_) printGameResult(num_of_alive_p1_tanks, num_of_alive_p2_tanks, output_path);
-
-    return 0;
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -301,7 +306,7 @@ ActionRequest MyGameManager::decideAction(Tank& tank, TankAlgorithm& algo){
             aliveTanks.push_back(t.get());
         }
     }
-    //it's ok that it's all tank, the algorithm can tell between its own tank and the opponent's
+    //it's ok that it's all tanks, the algorithm can tell between its own tank and the opponent's
     return tank.decideNextAction(aliveTanks);
 
 }
