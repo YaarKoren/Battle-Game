@@ -53,6 +53,7 @@ ActionRequest Tank::decideNextAction(const std::vector<Tank*>& allTanks) {
 bool Tank::canSeeEnemy(const std::vector<Tank*>& allTanks) const {
     if (!board_) return false;
 
+    // Compute the forward delta as signed ints
     int dx = 0, dy = 0;
     switch (dir_) {
         case Direction::Up:        dy = -1; break;
@@ -137,55 +138,59 @@ bool Tank::canSeeEnemy(const std::vector<Tank*>& allTanks) const {
 bool Tank::canMoveForward() const {
     if (!board_) return false;
 
-    Position nextPos = pos_;
+    // Compute the forward delta as signed ints
+    int dx = 0, dy = 0;
     switch (dir_) {
-        case Direction::Up: nextPos.moveUp(); break;
-        case Direction::Down: nextPos.moveDown(); break;
-        case Direction::Left: nextPos.moveLeft(); break;
-        case Direction::Right: nextPos.moveRight(); break;
-        case Direction::UpLeft:
-            nextPos.moveUp();
-            nextPos.moveLeft();
-            break;
-        case Direction::UpRight:
-            nextPos.moveUp();
-            nextPos.moveRight();
-            break;
-        case Direction::DownLeft:
-            nextPos.moveDown();
-            nextPos.moveLeft();
-            break;
-        case Direction::DownRight:
-            nextPos.moveDown();
-            nextPos.moveRight();
-            break;
+        case Direction::Up:        dy = -1; break;
+        case Direction::Down:      dy =  1; break;
+        case Direction::Left:      dx = -1; break;
+        case Direction::Right:     dx =  1; break;
+        case Direction::UpLeft:    dx = -1; dy = -1; break;
+        case Direction::UpRight:   dx =  1; dy = -1; break;
+        case Direction::DownLeft:  dx = -1; dy =  1; break;
+        case Direction::DownRight: dx =  1; dy =  1; break;
+        default: return false; // e.g., Stay
     }
+
+    // Work in signed temps to avoid underflow & sign-compare issues
+    int nx = (pos_.getX()) + dx;
+    int ny = (pos_.getY()) + dy;
+
+    const std::size_t W = board_->getWidth();
+    const std::size_t H = board_->getHeight();
 
     // Check if the position is valid (within bounds)
-    if (nextPos.getX() < 0 || nextPos.getX() >= board_->getWidth() ||
-        nextPos.getY() < 0 || nextPos.getY() >= board_->getHeight()) {
-        return false;
-    }
+    // Signed check for negatives, then compare as size_t for upper bounds
+    if (nx < 0 || ny < 0) return false;
+    if (static_cast<std::size_t>(nx) >= W ||
+        static_cast<std::size_t>(ny) >= H) return false;
+
+    // Build the next cell Position using the underlying coord type
+    using Coord = decltype(pos_.getX());  // int or size_t, whatever Position uses
+    Position nextPos = pos_;
+    nextPos.setX(static_cast<Coord>(nx));
+    nextPos.setY(static_cast<Coord>(ny));
 
     // Check if the position has a wall
+    // Inspect objects in the destination cell once
     const auto& objects = board_->getObjectsAt(nextPos);
-    for (GameObject* obj : objects) { // Explicit pointer type in the loop variable, to overcome error (o.w. loop variable isn’t a pointer type from the compiler’s point of view)
+    for (GameObject* obj : objects) {
+        if (!obj) continue;
         if (obj->getSymbol() == '#') {
-            return false; // Wall blocks movement
+            return false; // wall blocks movement
         }
-        return false; // Wall blocks movement
-    }
-
-    // Check if the position has another tank
-    for (GameObject*  obj : objects) {
-        Tank* otherTank = dynamic_cast<Tank*>(obj);
-        if (otherTank && otherTank != this) {
-            return false; // Another tank blocks movement
+        // If this cell contains another tank (not me) → blocked
+        if (auto* otherTank = dynamic_cast<Tank*>(obj)) {
+            if (otherTank != this && !otherTank->isDestroyed()) {
+                return false; // tank blocks movement
+            }
         }
     }
 
-    return true;
+    return true; // in bounds, no wall, no other tank
 }
+
+
 
 
 Direction Tank::getDirectionTowardEnemy(const std::vector<Tank*>& allTanks) const {
