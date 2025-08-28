@@ -154,14 +154,16 @@ bool Tank::canMoveForward() const {
 
     // Check if the position has a wall
     const auto& objects = board_->getObjectsAt(nextPos);
-    for (const auto& obj : objects) {
+    for (GameObject* obj : objects) { // Explicit pointer type in the loop variable, to overcome error (o.w. loop variable isn’t a pointer type from the compiler’s point of view)
         if (obj->getSymbol() == '#') {
             return false; // Wall blocks movement
+        }
+        return false; // Wall blocks movement
         }
     }
 
     // Check if the position has another tank
-    for (const auto& obj : objects) {
+    for (GameObject* auto& obj : objects) {
         Tank* otherTank = dynamic_cast<Tank*>(obj);
         if (otherTank && otherTank != this) {
             return false; // Another tank blocks movement
