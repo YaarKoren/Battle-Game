@@ -49,74 +49,89 @@ ActionRequest Tank::decideNextAction(const std::vector<Tank*>& allTanks) {
     // 4. Default action
     return ActionRequest::DoNothing;
 }
+
 bool Tank::canSeeEnemy(const std::vector<Tank*>& allTanks) const {
     if (!board_) return false;
 
     int dx = 0, dy = 0;
     switch (dir_) {
-        case Direction::Up: dy = -1; break;
-        case Direction::Down: dy = 1; break;
-        case Direction::Left: dx = -1; break;
-        case Direction::Right: dx = 1; break;
-        case Direction::UpLeft: dx = -1; dy = -1; break;
-        case Direction::UpRight: dx = 1; dy = -1; break;
-        case Direction::DownLeft: dx = -1; dy = 1; break;
-        case Direction::DownRight: dx = 1; dy = 1; break;
+        case Direction::Up:        dy = -1; break;
+        case Direction::Down:      dy =  1; break;
+        case Direction::Left:      dx = -1; break;
+        case Direction::Right:     dx =  1; break;
+        case Direction::UpLeft:    dx = -1; dy = -1; break;
+        case Direction::UpRight:   dx =  1; dy = -1; break;
+        case Direction::DownLeft:  dx = -1; dy =  1; break;
+        case Direction::DownRight: dx =  1; dy =  1; break;
     }
 
-    Position checkPos = pos_;
+    // Work in signed ints to avoid underflow & sign-compare issues
+    int x = (pos_.getX());
+    int y = (pos_.getY());
+
+    const std::size_t W = board_->getWidth();
+    const std::size_t H = board_->getHeight();
+
+    // Helper: signed check first, then compare as size_t
+    auto in_bounds = [&](int xx, int yy) -> bool {
+        return xx >= 0 && yy >= 0 &&
+               static_cast<std::size_t>(xx) < W &&
+               static_cast<std::size_t>(yy) < H;
+    };
+
+    using Coord = decltype(pos_.getX()); // underlying coord type (int or size_t)
 
     // Check along the line of sight
-    while (true) {
-        checkPos.setX(checkPos.getX() + dx);
-        checkPos.setY(checkPos.getY() + dy);
+    for (;;) {
+        x += dx; y += dy;
 
         // Check if we're out of bounds
-        if (checkPos.getX() < 0 || checkPos.getX() >= board_->getWidth() ||
-            checkPos.getY() < 0 || checkPos.getY() >= board_->getHeight()) {
-            return false;
-        }
+        if (!in_bounds(x, y)) return false;
 
         // Check if position has a wall (blocks line of sight)
-        const auto& objects = board_->getObjectsAt(checkPos);
+        // Build Position p from the signed temps (cast once we know it's valid)
+        Position p = pos_;
+        p.setX(static_cast<Coord>(x));
+        p.setY(static_cast<Coord>(y));
+
+        // Walls block line of sight
+        const auto& objects = board_->getObjectsAt(p);
         for (GameObject* obj : objects) {
-            if (obj->getSymbol() == '#') {
-                return false; // Wall blocks view
-            }
+            if (obj && obj->getSymbol() == '#') return false;
         }
 
         // Check if there's an enemy tank at this position
-        for (Tank* tank : allTanks) {
-            if (tank && !tank->isDestroyed() && tank->getPlayerId() != playerId_ &&
-                tank->getPosition() == checkPos) {
-                return true; // Enemy spotted!
-            }
+        for (const Tank* t : allTanks) {
+            if (!t || t->isDestroyed() || t->getPlayerId() == playerId_) continue;
+            int tx = static_cast<int>(t->getPosition().getX());
+            int ty = static_cast<int>(t->getPosition().getY());
+            if (tx == x && ty == y) return true;
         }
 
         // For diagonal directions, we need to check if the path is blocked by walls
         // in the horizontal or vertical directions (Bresenham's line algorithm would be better)
         if (dx != 0 && dy != 0) {
             // Check horizontal neighbor
-            Position horzPos(checkPos.getX() - dx, checkPos.getY());
-            const auto& horzObjects = board_->getObjectsAt(horzPos);
-            for (GameObject* obj : horzObjects) {
-                if (obj->getSymbol() == '#') {
-                    return false;
-                }
+            int hx = x - dx, hy = y;
+            if (in_bounds(hx, hy)) {
+                Position hp = p;
+                hp.setX(static_cast<Coord>(hx));
+                hp.setY(static_cast<Coord>(hy));
+                for (GameObject* obj : board_->getObjectsAt(hp))
+                    if (obj && obj->getSymbol() == '#') return false;
             }
 
             // Check vertical neighbor
-            Position vertPos(checkPos.getX(), checkPos.getY() - dy);
-            const auto& vertObjects = board_->getObjectsAt(vertPos);
-            for (GameObject* obj : vertObjects) {
-                if (obj->getSymbol() == '#') {
-                    return false;
-                }
+            int vx = x, vy = y - dy;
+            if (in_bounds(vx, vy)) {
+                Position vp = p;
+                vp.setX(static_cast<Coord>(vx));
+                vp.setY(static_cast<Coord>(vy));
+                for (GameObject* obj : board_->getObjectsAt(vp))
+                    if (obj && obj->getSymbol() == '#') return false;
             }
         }
     }
-
-    return false;
 }
 
 bool Tank::canMoveForward() const {
