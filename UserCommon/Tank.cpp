@@ -79,14 +79,14 @@ bool Tank::canSeeEnemy(const std::vector<Tank*>& allTanks) const {
 
         // Check if position has a wall (blocks line of sight)
         const auto& objects = board_->getObjectsAt(checkPos);
-        for (const auto& obj : objects) {
+        for (GameObject* obj : objects) {
             if (obj->getSymbol() == '#') {
                 return false; // Wall blocks view
             }
         }
 
         // Check if there's an enemy tank at this position
-        for (const auto& tank : allTanks) {
+        for (Tank* tank : allTanks) {
             if (tank && !tank->isDestroyed() && tank->getPlayerId() != playerId_ &&
                 tank->getPosition() == checkPos) {
                 return true; // Enemy spotted!
@@ -99,7 +99,7 @@ bool Tank::canSeeEnemy(const std::vector<Tank*>& allTanks) const {
             // Check horizontal neighbor
             Position horzPos(checkPos.getX() - dx, checkPos.getY());
             const auto& horzObjects = board_->getObjectsAt(horzPos);
-            for (const auto& obj : horzObjects) {
+            for (GameObject* obj : horzObjects) {
                 if (obj->getSymbol() == '#') {
                     return false;
                 }
@@ -108,7 +108,7 @@ bool Tank::canSeeEnemy(const std::vector<Tank*>& allTanks) const {
             // Check vertical neighbor
             Position vertPos(checkPos.getX(), checkPos.getY() - dy);
             const auto& vertObjects = board_->getObjectsAt(vertPos);
-            for (const auto& obj : vertObjects) {
+            for (GameObject* obj : vertObjects) {
                 if (obj->getSymbol() == '#') {
                     return false;
                 }
@@ -159,11 +159,10 @@ bool Tank::canMoveForward() const {
             return false; // Wall blocks movement
         }
         return false; // Wall blocks movement
-        }
     }
 
     // Check if the position has another tank
-    for (GameObject* auto& obj : objects) {
+    for (GameObject*  obj : objects) {
         Tank* otherTank = dynamic_cast<Tank*>(obj);
         if (otherTank && otherTank != this) {
             return false; // Another tank blocks movement
@@ -173,12 +172,13 @@ bool Tank::canMoveForward() const {
     return true;
 }
 
+
 Direction Tank::getDirectionTowardEnemy(const std::vector<Tank*>& allTanks) const {
     // Find the closest enemy tank
     const Tank* closestEnemy = nullptr;
     int minDistance = INT_MAX;
 
-    for (const auto& tank : allTanks) {
+    for (Tank* tank : allTanks) {
         if (tank && tank->getPlayerId() != playerId_) {
             int dist = std::abs(tank->getPosition().getX() - pos_.getX()) +
                       std::abs(tank->getPosition().getY() - pos_.getY());
