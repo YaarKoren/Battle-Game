@@ -172,18 +172,11 @@ bool Tank::canMoveForward() const {
     nextPos.setY(static_cast<Coord>(ny));
 
     // Check if the position has a wall
-    // Inspect objects in the destination cell once
     const auto& objects = board_->getObjectsAt(nextPos);
     for (GameObject* obj : objects) {
         if (!obj) continue;
         if (obj->getSymbol() == '#') {
             return false; // wall blocks movement
-        }
-        // If this cell contains another tank (not me) → blocked
-        if (auto* otherTank = dynamic_cast<Tank*>(obj)) {
-            if (otherTank != this && !otherTank->isDestroyed()) {
-                return false; // tank blocks movement
-            }
         }
     }
 
