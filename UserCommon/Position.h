@@ -16,11 +16,11 @@ namespace UserCommon_207177197_301251571
         int getY() const { return y_; }
 
         // Setters
-        void setX(size_t x) { x_ = x; }
-        void setY(size_t y) { y_ = y; }
+        void setX(int x) { x_ = x; }
+        void setY(int y) { y_ = y; }
 
         // Set both
-        void set(size_t x, size_t y) { x_ = x; y_ = y; }
+        void set(int x, int y) { x_ = x; y_ = y; }
 
         // Wrap around board dimensions
         // Wrap around board dimensions (safe for negatives and large values)

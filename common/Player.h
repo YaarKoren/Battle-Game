@@ -9,8 +9,8 @@ class SatelliteView;
 class Player {
 public:
 	virtual ~Player() {}
-virtual void updateTankWithBattleInfo
-(TankAlgorithm& tank, SatelliteView& satellite_view) = 0;
+	virtual void updateTankWithBattleInfo
+	(TankAlgorithm& tank, SatelliteView& satellite_view) = 0;
 };
 
 using PlayerFactory =

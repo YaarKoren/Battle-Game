@@ -4,9 +4,6 @@
 #include "../UserCommon/MyBattleInfo.h"
 #include "../UserCommon/Tank.h"
 
-
-
-
 namespace Algorithm_207177197_301251571 {
 
 class MyPlayer : public Player {
