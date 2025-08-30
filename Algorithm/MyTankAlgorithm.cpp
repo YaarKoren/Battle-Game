@@ -14,7 +14,7 @@ MyTankAlgorithm::MyTankAlgorithm(int playerIndex, int tankIndex)
          : playerIndex_(playerIndex),
            tankIndex_(tankIndex)
         {
-        //TODO understand if it's right (it's from the ctor of Hunter Algo)
+        //(from the ctor of Hunter Algo)
         currentDirection_ = Direction::Up;
         turnsSinceLastUpdate_ = 0;
         isDirectionInitialized_ = false;
