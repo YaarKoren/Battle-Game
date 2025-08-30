@@ -92,7 +92,7 @@ int MySimulator::run() //int cuz we want the program to always finish gracefully
     }
     else if (args_.mode_ == Mode::Competitive) {
         try {
-            runCompetitive(oss);
+            runCompetition(oss);
         } catch (const std::exception& e) {
             ErrorMsg::error_and_usage(e.what()); //msg to screen on fatal errors (including input files fatal errors)
             return 1;
@@ -221,7 +221,7 @@ void MySimulator::runComparative(std::ostringstream& oss) {
 
 
 
-void MySimulator::runCompetitive(std::ostringstream& oss) {
+void MySimulator::runCompetition(std::ostringstream& oss) {
     // --- 0) dlopen Game Manager .so file (auto-registration happens here) ---
     std::unique_ptr<AbstractGameManager> GM;
     load_and_validate_competition(GM); //throws an error on failure to open file / load / registrate

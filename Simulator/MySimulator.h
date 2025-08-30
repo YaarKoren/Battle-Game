@@ -64,7 +64,7 @@ private:
 
 
     void runComparative(std::ostringstream& oss);
-    void runCompetitive(std::ostringstream& oss);
+    void runCompetition(std::ostringstream& oss);
 
     //general helper functions
     void parse_map(std::ostringstream& oss, std::string& map_name, size_t& map_width, size_t& map_height, size_t& max_steps, size_t& num_shells,
