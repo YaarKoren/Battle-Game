@@ -4,6 +4,7 @@
 
 #include "MySimulator.h"
 #include "ErrorMsg.h"
+#include "ThreadPoolManager.h"
 
 
 namespace fs = std::filesystem;
@@ -147,20 +148,69 @@ void MySimulator::runComparative(std::ostringstream& oss) {
     load_and_validate_comparative(oss, GMs); //throws an error on failure to open file / load / registrate / empty folder
 
     // --- 3) Run each newly registered GameManager on the single map with both algos ---
-    std::vector<GMNameAndResult> GMs_and_results;
-    for (const auto& GM_and_name : GMs)
-    {
-        const std::string name = GM_and_name.name;
-        //run game
-        GameResult game_result = GM_and_name.GM->run(
-                map_width, map_height, *map, map_name,
-                max_steps, num_shells,
-                *player1, getCleanFileName(algo1SO), *player1, getCleanFileName(algo2SO),
-                p1_algo_factory, p2_algo_factory);
+    // ------ Multi Threading ------
 
-        //keep name and result
-        GMs_and_results.push_back({name, std::move(game_result)});
+    // Build tasks: one per GM
+    const size_t GMs_num = GMs.size();
+    std::vector<GMTask> tasks;
+    tasks.reserve(GMs_num); //pre-sizing avoids push_back races
+    for (size_t i = 0; i < GMs_num; ++i) {
+        tasks.push_back(GMTask{ i, i });
     }
+
+    // Pre-allocate results table (no locks needed)
+    std::vector<GMNameAndResult> GMs_and_results(GMs_num);
+
+    // Fill names now; results will be filled by workers
+    for (size_t i = 0; i < GMs_num; ++i) {
+        GMs_and_results[i].name = GMs[i].name;
+    }
+
+    //get clean names of the players
+    std::string  player_1_name = getCleanFileName(algo1SO);
+    std::string player_2_name = getCleanFileName(algo2SO);
+
+    // Decide how many worker threads to use
+    const int requested = threads_num_; // your MySimulator member
+    const bool single_thread = (requested <= 1);
+
+    const size_t num_tasks = tasks.size();
+
+    // cap by hardware and utilization
+    int hw = static_cast<int>(std::thread::hardware_concurrency());
+    if (hw <= 0) hw = 8;
+
+    int usable = static_cast<int>(std::min(num_tasks, static_cast<size_t>(requested)));
+    int worker_threads = single_thread ? 0 : std::min(usable, hw);
+
+    // If there are no tasks or only one, fall back to single-thread (utilization rule)
+    if (num_tasks <= 1) {
+        worker_threads = 0;
+    }
+
+    // Build producer
+    GMProducer producer{
+        &tasks, &GMs, &GMs_and_results,
+        player1.get(), player2.get(),
+        p1_algo_factory, p2_algo_factory,
+        &map, map_name,
+        map_width, map_height, max_steps, num_shells,
+        player_1_name, player_2_name
+    };
+
+    // Execute
+    if (worker_threads == 0) {
+        // Single-thread, main only
+        while (auto task = producer.getTask()) {
+            (*task)();
+        }
+    } else {
+        ThreadPoolManager<GMProducer> pool(producer, NumThreads{worker_threads});
+        pool.start();
+        // main thread may just wait (spec allows)
+        pool.wait_till_finish();
+    }
+
 
     // --- 4) format results and print them to the output file / screen ---
     GameResultPrinter::printComparativeResults(GMs_and_results, managersFolder,
