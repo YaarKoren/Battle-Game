@@ -24,10 +24,10 @@ class AlgorithmRegistrar {
             playerFactory_ = std::move(factory);
         }
         const std::string& name() const { return so_name_    ; }
-        std::unique_ptr<Player> createPlayer(int player_index, size_t x, size_t y, size_t max_steps, size_t num_shells) const {
+        std::unique_ptr<Player> createPlayerFactory(int player_index, size_t x, size_t y, size_t max_steps, size_t num_shells) const {
             return playerFactory_(player_index, x, y, max_steps, num_shells);
         }
-        std::unique_ptr<TankAlgorithm> createTankAlgorithm(int player_index, int tank_index) const {
+        std::unique_ptr<TankAlgorithm> createTankAlgorithmFactory(int player_index, int tank_index) const {
             return tankAlgorithmFactory_(player_index, tank_index);
         }
         bool hasPlayerFactory() const {

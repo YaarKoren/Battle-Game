@@ -417,18 +417,18 @@ void MySimulator::load_and_validate_comparative(std::unique_ptr<Player>& player1
 
     //Create Player instances for each side using the registered factories
     //The constructor signature is fixed by the mandatory interface
-    player1 = it1->createPlayer(/*player_index=*/1,
+    player1 = it1->createPlayerFactory(/*player_index=*/1,
         map_width, map_height, max_steps, num_shells);
-    player2 = it2->createPlayer(/*player_index=*/2,
+    player2 = it2->createPlayerFactory(/*player_index=*/2,
         map_width, map_height, max_steps, num_shells);
 
     //Build TankAlgorithmFactory callables that delegate to the registrar entries
     //(We don’t need to fetch the raw factory object; no dlsym needed.)
     p1_algo_factory = [it1](int player_index, int tank_index) {
-        return it1->createTankAlgorithm(player_index, tank_index);
+        return it1->createTankAlgorithmFactory(player_index, tank_index);
     };
     p2_algo_factory = [it2](int player_index, int tank_index) {
-        return it2->createTankAlgorithm(player_index, tank_index);
+        return it2->createTankAlgorithmFactory(player_index, tank_index);
     };
 }
 
@@ -481,7 +481,7 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
         std::string name = it->name();
         name = getCleanFileName(name);
         //Create GM instance, using the registered factories
-        std::unique_ptr<AbstractGameManager> GM = it->createGameManager(verbose_);
+        std::unique_ptr<AbstractGameManager> GM = it->createGameManagerFactory(verbose_);
 
         //keep GM and its name
         GMs.push_back({name, std::move(GM)});
@@ -581,7 +581,7 @@ void MySimulator::load_and_validate_competition(std::unique_ptr<AbstractGameMana
     auto it = GMReg.begin(); std::advance(it, static_cast<long>(index));
 
     //Create GM instance, using the registered factories
-    GM = it->createGameManager(verbose_);
+    GM = it->createGameManagerFactory(verbose_);
 }
 
 void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::vector<AlgoAndScore>& algos_and_scores)
@@ -636,14 +636,14 @@ void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::ve
         algos_and_scores[i].player_factory =
             [iter](int player_index, size_t x, size_t y, size_t max_steps, size_t num_shells)
             {
-                return iter->createPlayer(player_index, x, y, max_steps, num_shells);
+                return iter->createPlayerFactory(player_index, x, y, max_steps, num_shells);
             };
 
         //create and keep Algorithm Factory
         algos_and_scores[i].algo_factory =
             [iter](int player_index, int tank_index)
             {
-                return iter->createTankAlgorithm(player_index, tank_index);
+                return iter->createTankAlgorithmFactory(player_index, tank_index);
             };
 
         //initialize score as 0
