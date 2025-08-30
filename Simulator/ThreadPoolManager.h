@@ -77,7 +77,7 @@ void ThreadPoolManager<Producer>::worker_function() {
 
 template<typename Producer>
 ThreadPoolManager<Producer>::ThreadPoolManager(Producer& producer, NumThreads numThreads)
-    : producer_(std::move(producer)),
+    : producer_(&producer),
       numThreads(numThreads)
 	{
       workers.reserve(numThreads);

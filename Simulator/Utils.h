@@ -52,7 +52,7 @@ struct GMProducer {
         GMTask t = (*tasks)[i];
 
         // capture everything this unit of work needs by value (or safe pointer)
-        return std::function<void()>([=]() {
+        return std::function<void()>([=, this]() {
             try {
                 // Run this GM exactly once (each task is a distinct GM)
                 auto& gm_and_name = (*GMs)[t.gm_index];
@@ -96,5 +96,4 @@ struct AlgoAndScoreSmall {
     int score;
 };
 
-//---------------------------general helper functions---------------------------
-static std::string getCleanFileName(const std::string& path);
+
