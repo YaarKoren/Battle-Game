@@ -55,7 +55,7 @@ GameResult MyGameManager::run(
 
    run();   //upadates final_result_ when Game is done
    			//prints results if verobose_ == true
-   			//throws an error TODO: when
+   			//throws error
    			//Simulator (aka caller) should catch it
 
   GameResult result = std::move(final_result_);
@@ -331,7 +331,7 @@ void MyGameManager::handleRequestBattleInfo(Tank& tank) {
     if (player) {
         if (!tank.getAlgorithm()) {
            throw std::runtime_error (
-                  std::string("Tank has no algorithm! Player: ")
+                  std::string("[Game Manager] Error in handle_Request_Battle_Info: Tank has no algorithm! Player: ")
                   + std::to_string(tank.getPlayerId())
                   + std::string(", Tank ID: ")
                   + std::to_string(tank.getId())
@@ -371,7 +371,7 @@ void MyGameManager::handleAction(Tank& tank, ActionRequest action) {
         case ActionRequest::RotateRight45: handleRotateEighthRight(tank); break;
         case ActionRequest::RotateRight90: handleRotateFourthRight(tank); break;
         case ActionRequest::DoNothing: handleDoNothing(tank); break;
-        default: throw std::runtime_error(std::string("Error in handleAction: fall to default\n")); break; //should not happen!
+        default: throw std::runtime_error(std::string("[Game Manager] Error in handleAction: fall to default\n")); break; //should not happen!
     }
 }
 
@@ -388,6 +388,7 @@ void MyGameManager::handleAutoMoveTankBack(Tank& tank) {
         handleMoveTankBack(tank);
     }
 }
+
 
 void MyGameManager::moveForwardAndWrap(Shell& shell) {
     shell.moveForward();

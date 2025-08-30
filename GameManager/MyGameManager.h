@@ -21,7 +21,6 @@
 #include "../common/GameManagerRegistration.h"
 #include "../common/GameResult.h"
 #include "../common/Player.h"
-#include "../common/SatelliteView.h"
 #include "../common/TankAlgorithm.h"
 
 #include "../UserCommon/Board.h"
@@ -31,8 +30,7 @@
 #include "../UserCommon/Mine.h"
 #include "../UserCommon/Wall.h"
 #include "../UserCommon/Shell.h"
-#include "../UserCommon/MyBattleInfo.h" //TODO: or the abstract?
-#include "../UserCommon/SatelliteViewImpl.h"   //TODO: or the abstract?
+#include "../UserCommon/SatelliteViewImpl.h"
 
 
 
