@@ -14,10 +14,6 @@ using namespace UserCommon_207177197_301251571;
 
 namespace GameManager_207177197_301251571 {
 
-REGISTER_GAME_MANAGER(MyGameManager);
-
-
-
 MyGameManager::MyGameManager(bool verbose) :  verbose_(verbose),
     board_(1, 1) // meaningless initiazlization just to make it work
     {}
@@ -788,5 +784,7 @@ std::string MyGameManager::actionRequestToString(ActionRequest action){
         }
         return action_str;
 }
+
+REGISTER_GAME_MANAGER(MyGameManager);
 
 }

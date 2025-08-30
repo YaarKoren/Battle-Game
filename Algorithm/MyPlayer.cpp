@@ -5,8 +5,6 @@ using namespace UserCommon_207177197_301251571;
 
 namespace Algorithm_207177197_301251571 {
 
-REGISTER_PLAYER(MyPlayer);
-
 MyPlayer::MyPlayer(int player_index, size_t width, size_t height, size_t max_steps, size_t num_shells)
         : player_index_(player_index),
           board_width_(width),
@@ -20,6 +18,6 @@ void MyPlayer::updateTankWithBattleInfo(TankAlgorithm& tank, SatelliteView& sate
         tank.updateBattleInfo(info);  // Polymorphic dispatch
 }
 
-
+REGISTER_PLAYER(MyPlayer);
 
 }

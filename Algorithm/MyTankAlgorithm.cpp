@@ -3,8 +3,6 @@
 
 namespace Algorithm_207177197_301251571 {
 
-REGISTER_TANK_ALGORITHM(MyTankAlgorithm);
-
 MyTankAlgorithm::MyTankAlgorithm(int playerIndex, int tankIndex)
          : playerIndex_(playerIndex),
            tankIndex_(tankIndex) {}
@@ -23,5 +21,6 @@ void MyTankAlgorithm::updateBattleInfo(BattleInfo& info) {
     actualAlgo_->updateBattleInfo(info);
 }
 
+REGISTER_TANK_ALGORITHM(MyTankAlgorithm);
 
 }
