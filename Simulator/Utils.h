@@ -37,8 +37,8 @@ struct GMProducer {
     std::vector<GMNameAndResult>* results;            // not owning
     Player* player1;                                   // not owning
     Player* player2;                                   // not owning
-    TankAlgorithmFactory p1_factory;                   // copies are fine
-    TankAlgorithmFactory p2_factory;                   // copies are fine
+    TankAlgorithmFactory p1_algo_factory;                   // copies are fine
+    TankAlgorithmFactory p2_algo_factory;                   // copies are fine
     const std::unique_ptr<SatelliteView>* map;
     std::string map_name;
     size_t map_width, map_height, max_steps, num_shells;
@@ -64,7 +64,7 @@ struct GMProducer {
                     max_steps, num_shells,
                     *player1, player_1_name,
                     *player2, player_2_name,
-                    p1_factory, p2_factory
+                    p1_algo_factory, p2_algo_factory
                 );
 
                 // Store result in its unique slot (no lock)
@@ -109,6 +109,7 @@ struct ScoreDelta {
 struct GMCompetitionProducer {
     const std::vector<CompetitionTask>* tasks;
     std::vector<ScoreDelta>* deltas;
+    bool verbos
 
     // read-only context:
     const std::vector<MapParser::MapArgs>* maps_data;
@@ -128,11 +129,15 @@ struct GMCompetitionProducer {
             const auto& mapArgs = (*maps_data)[t.map_idx];
 
             // create fresh instances (cheap & thread-safe)
-            auto gm = gm_factory();
+            auto gm = gm_factory(verbose);
 
-            // Factories for algos i and j
-            auto p1_factory = (*algos_and_scores)[t.i].player_factory;
-            auto p2_factory = (*algos_and_scores)[t.j].player_factory;
+            // Players for i and j
+            Player* Player1 = (*algos_and_scores)[t.i].player_factory(/*player index*/ 1, map_width, map_height, max_steps, num_shells);
+            Player* Player2 = (*algos_and_scores)[t.j].player_factory(/*player index*/ 2, map_width, map_height, max_steps, num_shells);
+
+            // Factories for  i and j
+            auto p1_algo_factory = (*algos_and_scores)[t.i].algo_factory;
+            auto p2_algo_factory = (*algos_and_scores)[t.j].algo_factory;
 
             // Build Players if your GM expects Player&; or your GM may do it internally.
             // If you need Player instances here, create them fresh as well.
@@ -145,17 +150,17 @@ struct GMCompetitionProducer {
             GameResult gr = gm->run(
                 mapArgs.map_width_, mapArgs.map_height_, *mapArgs.map_, mapArgs.map_name_,
                 mapArgs.max_steps_, mapArgs.num_shells_,
-                /* Player& */ *(/* create or supply */), name1,
-                /* Player& */ *(/* create or supply */), name2,
-                p1_factory, p2_factory
+                Player1, name1,
+                Player2 , name2,
+                p1_algo_factory, p2_algo_factory
             );
 
             // Compute score delta for this single game.
             // Replace this switch with your real scoring logic:
             ScoreDelta d{t.i, t.j, 0, 0};
-            if      (gr.winner == 1) { d.di += 2; /* or +3, your rule */ }
-            else if (gr.winner == 2) { d.dj += 2; }
-            else { d.di += 1; d.dj += 1; } // tie example
+            if      (gr.winner == 1) { d.di += 3;  }
+            else if (gr.winner == 2) { d.dj += 3; }
+            else { d.di += 1; d.dj += 1; } // tie
 
             // Store in unique slot (no lock)
             (*deltas)[t.slot] = d;

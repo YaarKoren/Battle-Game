@@ -269,9 +269,40 @@ void MySimulator::runCompetition(std::ostringstream& oss) {
     // Pre-allocate one result cell per task (avoids locking)
     std::vector<ScoreDelta> deltas(tasks.size());
 
+    //execute
+    const int requested = threads_num_;            // your member
+    const bool single_thread = (requested <= 1);
 
+    const size_t num_tasks = tasks.size();
+    int hw = (int)std::thread::hardware_concurrency();
+    if (hw <= 0) hw = 8;
 
+    // cap workers by tasks and hardware
+    int usable = (int)std::min(num_tasks, (size_t)requested);
+    int worker_threads = single_thread ? 0 : std::min(usable, hw);
+    if (num_tasks <= 1) worker_threads = 0; // no point in workers
 
+    // Build producer
+    GMCompetitionProducer producer{
+        &tasks, &deltas,
+        verbose_,
+        &maps_data, &algos_and_scores,
+        GM_factory
+    };
+
+    if (worker_threads == 0) {
+        while (auto task = producer.getTask()) (*task)();
+    } else {
+        ThreadPoolManager<GMCompetitionProducer> pool(producer, NumThreads{worker_threads});
+        pool.start();
+        pool.wait_till_finish();
+    }
+
+    //Aggregate the results (this part is single-threaded)
+    for (const auto& d : deltas) {
+        algos_and_scores[d.i].score += d.di;
+        algos_and_scores[d.j].score += d.dj;
+    }
 
     // --- 4) format results and print them to the output file / screen ---
     //make parameters for the printing function
