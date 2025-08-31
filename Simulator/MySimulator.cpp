@@ -83,7 +83,7 @@ int MySimulator::run() //int cuz we want the program to always finish gracefully
             return 1;
         }
             catch (...) {
-            std::cout << "Unknown error\n";
+            std::cout << "[SIM] Unknown error\n";
             return 1;
         }
     }
@@ -95,7 +95,7 @@ int MySimulator::run() //int cuz we want the program to always finish gracefully
             return 1;
         }
         catch (...) {
-            std::cout << "Unknown error\n";
+            std::cout << "[SIM] Unknown error\n";
             return 1;
         }
     }
@@ -107,7 +107,7 @@ int MySimulator::run() //int cuz we want the program to always finish gracefully
         const std::string out_path = "input_errors.txt"; // in working directory (according to forum's specs)
         std::ofstream out(out_path);
         if (!out) {
-            std::cerr << "ERROR: cannot create output file: " << out_path
+            std::cerr << "[SIM] ERROR: cannot create output file: " << out_path
                       << " — printing results to screen instead.\n";
             std::cout << errors_input_content;
         }
@@ -271,11 +271,6 @@ void MySimulator::runCompetition(std::ostringstream& oss) {
 
 
 
-               //runGameAndKeepScore(l, opp, algos_and_scores, map_width, map_height,
-                    //max_steps, num_shells, map_name,
-                    //map, GM);
-
-
 
 
     // --- 4) format results and print them to the output file / screen ---
@@ -355,7 +350,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
         algo_libs_.emplace_back(std::make_unique<SharedLib>(so_path));
     } catch (const std::exception& e) {
         reg.removeLast(); // rollback empty slot
-        throw std::runtime_error(std::string("Failed to open Algorithm .so file\n") + e.what());  // with the dlopen error text
+        throw std::runtime_error(std::string("[SIM] Failed to open Algorithm .so file\n") + e.what());  // with the dlopen error text
     }
 
     // Validate that both factories were provided by the .so
@@ -367,7 +362,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
         if (!bad.hasName) msg += " missing name;"; //should not happen; if path argument is missing in cmd args, we catch it before
         if (!bad.hasPlayerFactory) msg += " missing Player factory;";
         if (!bad.hasTankAlgorithmFactory) msg += " missing TankAlgorithm factory;";
-         throw std::runtime_error(std::string("Failed to Register Algorithm .so file: ") + msg);
+         throw std::runtime_error(std::string("[SIM] Failed to Register Algorithm .so file: ") + msg);
     }
 
     // Return the index of the newly validated entry (last)
@@ -401,7 +396,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
         GM_libs_.emplace_back(std::make_unique<SharedLib>(so_path));
     } catch (const std::exception& e) {
         reg.removeLast(); // rollback empty slot
-        throw std::runtime_error (std::string("Failed to open Game Manager .so file\n") + e.what());  // with the dlopen error text
+        throw std::runtime_error (std::string("[SIM] Failed to open Game Manager .so file\n") + e.what());  // with the dlopen error text
     }
 
     // Validate that factory was provided by the .so
@@ -412,7 +407,7 @@ std::string MySimulator::getCleanFileName(const std::string& path) {
         std::string msg = "Bad registration in '" + bad.name + "':";
         if (!bad.hasName) msg += " missing name;"; //should not happen; if path argument is missing in cmd args, we catch it before
         if (!bad.hasGMFactory) msg += " missing Game Manager factory;";
-        throw std::runtime_error (std::string("Failed to Register Algorithm .so file: ") + msg);
+        throw std::runtime_error (std::string("[SIM] Failed to Register Algorithm .so file: ") + msg);
     }
 
     // Return the index of the newly validated entry (last)
@@ -479,7 +474,7 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
     for (auto& p : gm_so_paths) std::cerr << "  " << p << "\n";
 
     if (gm_so_paths.empty()) {
-        throw std::runtime_error(std::string("No .so files in Game Managers dir:  ") + managersFolder);
+        throw std::runtime_error(std::string("[SIM] No .so files in Game Managers dir:  ") + managersFolder);
     }
 
     const size_t gm_so_paths_num = gm_so_paths.size();
@@ -495,7 +490,7 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
             indices.push_back(idx);
         } catch (const std::exception& e) {
             //add to oss (=input_errors file) the info about the error; it includes the file path (see implementation of SharedLib)
-            oss << "[SIM] Error in Game Manger .so file:\n" << e.what() << "\n\n";
+            oss << "Error in Game Manger .so file:\n" << e.what() << "\n\n";
         }
     }
 

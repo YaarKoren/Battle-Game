@@ -105,3 +105,60 @@ struct ScoreDelta {
     size_t i, j;
     int di, dj;
 };
+
+struct GMCompetitionProducer {
+    const std::vector<CompetitionTask>* tasks;
+    std::vector<ScoreDelta>* deltas;
+
+    // read-only context:
+    const std::vector<MapParser::MapArgs>* maps_data;
+    const std::vector<AlgoAndScore>* algos_and_scores; // to get factories and names
+    GameManagerFactory gm_factory;                      // create fresh GM per task
+
+    std::atomic_size_t next{0};
+
+    std::optional<std::function<void()>> getTask() {
+        size_t idx = next.fetch_add(1, std::memory_order_relaxed);
+        if (idx >= tasks->size()) return std::nullopt;
+
+        CompetitionTask t = (*tasks)[idx];
+
+        // capture by value pointers/indices; no shared mutation inside
+        return std::function<void()>([=]() {
+            const auto& mapArgs = (*maps_data)[t.map_idx];
+
+            // create fresh instances (cheap & thread-safe)
+            auto gm = gm_factory();
+
+            // Factories for algos i and j
+            auto p1_factory = (*algos_and_scores)[t.i].player_factory;
+            auto p2_factory = (*algos_and_scores)[t.j].player_factory;
+
+            // Build Players if your GM expects Player&; or your GM may do it internally.
+            // If you need Player instances here, create them fresh as well.
+
+            // Names shown in results
+            std::string name1 = (*algos_and_scores)[t.i].name;
+            std::string name2 = (*algos_and_scores)[t.j].name;
+
+            // Run one game
+            GameResult gr = gm->run(
+                mapArgs.map_width_, mapArgs.map_height_, *mapArgs.map_, mapArgs.map_name_,
+                mapArgs.max_steps_, mapArgs.num_shells_,
+                /* Player& */ *(/* create or supply */), name1,
+                /* Player& */ *(/* create or supply */), name2,
+                p1_factory, p2_factory
+            );
+
+            // Compute score delta for this single game.
+            // Replace this switch with your real scoring logic:
+            ScoreDelta d{t.i, t.j, 0, 0};
+            if      (gr.winner == 1) { d.di += 2; /* or +3, your rule */ }
+            else if (gr.winner == 2) { d.dj += 2; }
+            else { d.di += 1; d.dj += 1; } // tie example
+
+            // Store in unique slot (no lock)
+            (*deltas)[t.slot] = d;
+        });
+    }
+};
