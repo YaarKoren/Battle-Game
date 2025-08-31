@@ -8,6 +8,8 @@
 #include "../common/PlayerRegistration.h"
 #include "../common/TankAlgorithmRegistration.h"
 
+#include "MapParser.h"
+
 #define MAX_STEPS_AFTER_SHELLS_END 40
 
 //----------------------------------------comparative--------------------------------------------------
@@ -125,7 +127,7 @@ struct GMCompetitionProducer {
         CompetitionTask t = (*tasks)[idx];
 
         // capture by value pointers/indices; no shared mutation inside
-        return std::function<void()>([=]() { //task lambda
+        return std::function<void()>([=, this]() { //task lambda
             const auto& mapArgs = (*maps_data)[t.map_idx];
 
             // create fresh instances (cheap & thread-safe)
