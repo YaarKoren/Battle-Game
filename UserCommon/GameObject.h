@@ -22,7 +22,7 @@ public:
     virtual ObjectKind kind() const noexcept = 0;
 
     virtual void decreaseLifeLeft() {} //inline no-op; only for Wall use; other objects inherits default no-op
-    virtual void setWasKilledThisStep(bool val) {} //inline no-op; only for Tank use; other objects inherits default no-op
+    virtual void setWasKilledThisStep([[maybe_unused]] bool val) {} //inline no-op; only for Tank use; other objects inherits default no-op
 
 
 protected:
