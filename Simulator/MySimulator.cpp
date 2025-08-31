@@ -57,9 +57,10 @@ int main(int argc, char* argv[]) {
     //---1) run the simulaion
   MySimulator sim(std::move(*args));
   try {
-    const int rc = sim.run();   // no exit(); the run() function catches errors (and on case of error, print error msg and returns 1)
-    //TODO: maybe add printing to screen if run failed or succeeded
-    return rc;                  //0- success, 1-fail
+    const int run_res = sim.run();   // no exit(); the run() function catches errors (and on case of error, print error msg and returns 1)
+    if (run_res == 0) {std::cout << "[SIM] Run succeeded, finished." << "\n";}
+    else {std::cout << "[SIM] Run failed, finished." << "\n";}
+    return run_res;                  //0- success, 1-fail
   } catch (const std::exception& e) { //for catching errors not caught by run() itself
     std::cerr << "Fatal error: " << e.what() << "\n";
     return 2; // non-zero so shell knows it failed
@@ -73,10 +74,6 @@ int MySimulator::run() //int cuz we want the program to always finish gracefully
 {
     // a string buffer, to build the input_errors file (for the recoverable errors in map + .so file)
     std::ostringstream oss;
-
-    //TODO: separate the run to (1) read input files, then create errors_file or print error and finish (2) run games
-    //TODO: pros: make sense, no need to pass oss, multi threading only in the run part
-    //TODO: cons: I need all the params from the reading, in the running function
 
     if (args_.mode_ == Mode::Comparative) {
         try {
@@ -543,8 +540,6 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
 
 //------------------------------competition mode - helper function--------------------------------
 //iterate through the folder and returns a list paths of files
-//TODO: maybe check if the files ends with ".txt"?
-//TODO: unite with prev func to avoid duplicates
 std::vector<std::string> MySimulator::getFilesList(const std::string& dir_path) {
     std::vector<std::string> file_paths;
     for (const auto& e : fs::directory_iterator(fs::absolute(dir_path))) {
