@@ -109,7 +109,7 @@ struct ScoreDelta {
 struct GMCompetitionProducer {
     const std::vector<CompetitionTask>* tasks;
     std::vector<ScoreDelta>* deltas;
-    bool verbos
+    bool verbose;
 
     // read-only context:
     const std::vector<MapParser::MapArgs>* maps_data;
@@ -125,15 +125,17 @@ struct GMCompetitionProducer {
         CompetitionTask t = (*tasks)[idx];
 
         // capture by value pointers/indices; no shared mutation inside
-        return std::function<void()>([=]() {
+        return std::function<void()>([=]() { //task lambda
             const auto& mapArgs = (*maps_data)[t.map_idx];
 
             // create fresh instances (cheap & thread-safe)
             auto gm = gm_factory(verbose);
 
             // Players for i and j
-            Player* Player1 = (*algos_and_scores)[t.i].player_factory(/*player index*/ 1, map_width, map_height, max_steps, num_shells);
-            Player* Player2 = (*algos_and_scores)[t.j].player_factory(/*player index*/ 2, map_width, map_height, max_steps, num_shells);
+           std::unique_ptr<Player> Player1 = (*algos_and_scores)[t.i].player_factory(
+               /*player index*/ 1, mapArgs.map_width_, mapArgs.map_height_, mapArgs.max_steps_, mapArgs.num_shells_);
+           std::unique_ptr<Player> Player2 = (*algos_and_scores)[t.j].player_factory(
+               /*player index*/ 2, mapArgs.map_width_, mapArgs.map_height_, mapArgs.max_steps_, mapArgs.num_shells_);
 
             // Factories for  i and j
             auto p1_algo_factory = (*algos_and_scores)[t.i].algo_factory;
@@ -150,8 +152,8 @@ struct GMCompetitionProducer {
             GameResult gr = gm->run(
                 mapArgs.map_width_, mapArgs.map_height_, *mapArgs.map_, mapArgs.map_name_,
                 mapArgs.max_steps_, mapArgs.num_shells_,
-                Player1, name1,
-                Player2 , name2,
+                *Player1, name1,
+                *Player2 , name2,
                 p1_algo_factory, p2_algo_factory
             );
 
