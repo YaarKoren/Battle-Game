@@ -89,12 +89,12 @@ private:
 
 
     //competition mode  helper functions
-    void load_and_validate_competition(std::unique_ptr<AbstractGameManager>& GM);
+    void load_and_validate_competition(GameManagerFactory GM_factory);
     void load_and_validate_competition(std::ostringstream& oss, std::vector<AlgoAndScore>& algos_and_scores);
     void read_maps(std::ostringstream& oss, std::vector<MapParser::MapArgs>& maps_data) const;
 
     static std::vector<std::string> getFilesList(const std::string& dir_path);
-    static int getOpponentIdx(size_t l, size_t k, size_t N);
+    static size_t getOpponentIdx(size_t l, size_t k, size_t N);
     static void runGameAndKeepScore(size_t l,  int opp, std::vector<AlgoAndScore>& algos_and_scores,
         size_t map_width,  size_t map_height, size_t max_steps, size_t num_shells,
         const std::string& map_name,

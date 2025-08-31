@@ -10,7 +10,7 @@
 
 #define MAX_STEPS_AFTER_SHELLS_END 40
 
-//-----------------------------comparative--------------------------------------------------
+//----------------------------------------comparative--------------------------------------------------
 
 struct GMObjectAndName {
         std::string name; // own the name
@@ -23,13 +23,14 @@ struct GMNameAndResult {
 };
 
 
-//Multi Threading helper struct
+//Multi Threading helper structs
+
 struct GMTask {
     size_t gm_index;
     size_t result_slot;
 };
 
-//Multi Threading helper struct
+
 struct GMProducer {
     const std::vector<GMTask>* tasks;                 // not owning
     const std::vector<GMObjectAndName>* GMs;          // not owning
@@ -38,10 +39,10 @@ struct GMProducer {
     Player* player2;                                   // not owning
     TankAlgorithmFactory p1_factory;                   // copies are fine
     TankAlgorithmFactory p2_factory;                   // copies are fine
-    const std::unique_ptr<SatelliteView>* map;         // pointer to your unique_ptr
+    const std::unique_ptr<SatelliteView>* map;
     std::string map_name;
     size_t map_width, map_height, max_steps, num_shells;
-    std::string player_1_name, player_2_name;                      // if you have these names in scope
+    std::string player_1_name, player_2_name;
 
     std::atomic_size_t next{0};                        // work index
 
@@ -69,20 +70,14 @@ struct GMProducer {
                 // Store result in its unique slot (no lock)
                 (*results)[t.result_slot].result = std::move(game_result);
             } catch (const std::exception& e) {
-                // Record a failure in-place (define your policy)
-                GameResult fail{};
-                fail.winner = 0;
-                fail.reason = GameResult::MAX_STEPS; // or a custom "ERROR" if you add one
-                fail.rounds = 0;
-                (*results)[t.result_slot].result = std::move(fail);
-                // Optionally: log e.what()
+                // TODO log e.what()
             }
         });
     }
 };
 
 
-//------------------------------competition-----------------------------------------------
+//------------------------------------------competition-----------------------------------------------
 struct AlgoAndScore
 {
     std::string name;
@@ -96,4 +91,17 @@ struct AlgoAndScoreSmall {
     int score;
 };
 
+//Multi Threading helper structs
 
+struct CompetitionTask {
+    size_t map_idx;  // k
+    size_t i;        // algo index
+    size_t j;        // opponent index
+    size_t slot;     // index into results[]
+};
+
+struct ScoreDelta {
+    // how this single game changes the scores of i and j
+    size_t i, j;
+    int di, dj;
+};

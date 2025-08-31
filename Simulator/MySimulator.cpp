@@ -220,8 +220,9 @@ void MySimulator::runComparative(std::ostringstream& oss) {
 
 void MySimulator::runCompetition(std::ostringstream& oss) {
     // --- 0) dlopen Game Manager .so file (auto-registration happens here) ---
-    std::unique_ptr<AbstractGameManager> GM;
-    load_and_validate_competition(GM); //throws an error on failure to open file / load / registrate
+    GameManagerFactory GM_factory; //get the factory, in order create a fresh GameManager instance per task
+                                            //(spec says GM/Algorithm instances are cheap,  so we don’t reuse a single instance across threads)
+    load_and_validate_competition(GM_factory); //throws an error on failure to open file / load / registrate
                                      //no need to pass oss, cuz can't have recoverable errors here
 
 
@@ -237,55 +238,45 @@ void MySimulator::runCompetition(std::ostringstream& oss) {
 
 
     // --- 3) for each read map, run games of the N algos on this map, and keep the results
+    //------ Multi Threading ------
+    //we don't let threads mutate algos_and_scores directly
+    //each task runs one game and returns a score delta result for the two algos
+    //after the pool finishes, the main thread folds all deltas into algos_and_scores (pros: no locks needed)
 
-    //prepare variable for the nested loop
-    std::string map_name;
-    size_t map_width;
-    size_t map_height;
-    size_t max_steps;
-    size_t num_shells;
-    std::unique_ptr<SatelliteView> map;
-    int opp;
 
-    bool isOnlyHalfGames;
+    //Build all tasks for all maps
+    std::vector<CompetitionTask> tasks;
+    tasks.reserve(/* upper-bound: K*N */ K * N);
 
-    for (size_t k = 0; k < K; ++k)
-    {
-        //parse map data we got
-        map_name = maps_data[k].map_name_;
-        map_width = maps_data[k].map_width_;
-        map_height = maps_data[k].map_height_;
-        max_steps = maps_data[k].max_steps_;
-        num_shells = maps_data[k].num_shells_;
-        map = std::move(maps_data[k].map_);
-
-        isOnlyHalfGames = (N % 2 == 0) && (k == N/2 - 1); //  offset == N/2
-                                                          //specs :Note that in the case of k = N/2 - 1 (if N is even),
-                                                          //the pairing for each algorithm in both games would be exactly the same.
-                                                          //You are supposed to run only one game for each pair in this case
-
-       if (isOnlyHalfGames)
-       {
-           for (size_t l = 0; l < N/2; ++l )
-           {
-               opp = getOpponentIdx(l, k, N);
-               runGameAndKeepScore(l, opp, algos_and_scores, map_width, map_height,
-                   max_steps, num_shells, map_name,
-                   map, GM);
-           }
-       }
-       else
-       {
-           for (size_t l = 0; l < N; ++l )
-           {
-               opp = getOpponentIdx(l, k, N);
-               runGameAndKeepScore(l, opp, algos_and_scores, map_width, map_height,
-                    max_steps, num_shells, map_name,
-                    map, GM);
-           }
-       }
-
+    for (size_t k = 0; k < K; ++k) {
+        bool isOnlyHalfGames = (N % 2 == 0) && (k == N/2 - 1);  //offset == N/2
+                                                                //specs :Note that in the case of k = N/2 - 1 (if N is even),
+                                                                //the pairing for each algorithm in both games would be exactly the same.
+                                                                //You are supposed to run only one game for each pair in this case
+        if (isOnlyHalfGames) {
+            for (size_t l = 0; l < N/2; ++l) {
+                const size_t opp = getOpponentIdx(l, k, N);
+                tasks.push_back(CompetitionTask{ k, l, opp, tasks.size() });
+            }
+        } else {
+            for (size_t l = 0; l < N; ++l) {
+                const size_t opp = getOpponentIdx(l, k, N);
+                tasks.push_back(CompetitionTask{ k, l, opp, tasks.size() });
+            }
+        }
     }
+
+    // Pre-allocate one result cell per task (avoids locking)
+    std::vector<ScoreDelta> deltas(tasks.size());
+
+
+
+               //runGameAndKeepScore(l, opp, algos_and_scores, map_width, map_height,
+                    //max_steps, num_shells, map_name,
+                    //map, GM);
+
+
+
 
     // --- 4) format results and print them to the output file / screen ---
     //make parameters for the printing function
@@ -504,7 +495,7 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
             indices.push_back(idx);
         } catch (const std::exception& e) {
             //add to oss (=input_errors file) the info about the error; it includes the file path (see implementation of SharedLib)
-            oss << "Error in Game Manger .so file:\n" << e.what() << "\n\n";
+            oss << "[SIM] Error in Game Manger .so file:\n" << e.what() << "\n\n";
         }
     }
 
@@ -514,7 +505,7 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
 
     size_t gm_num = indices.size();
     if (gm_num == 0) {
-        throw std::runtime_error (std::string("All .so files in Game Managers dir: ") + managersFolder + std::string("could not be loaded"));
+        throw std::runtime_error (std::string("[SIM] All .so files in Game Managers dir: ") + managersFolder + std::string("could not be loaded"));
     }
 
     //for each .so file, create GM and keep it and its name in the vector
@@ -551,15 +542,15 @@ std::vector<std::string> MySimulator::getFilesList(const std::string& dir_path) 
 }
 
 //assuming N >=2, l >= 0, k > 0
-int MySimulator::getOpponentIdx(const size_t l, const size_t k, const size_t N)
+size_t MySimulator::getOpponentIdx(const size_t l, const size_t k, const size_t N)
 {
     // offset = 1 + (k % (N-1))
     const size_t offset = 1 + (k % (N - 1));
 
     // opponent index per spec: (l + offset) % N
-    const size_t opp = (static_cast<size_t>(l) + offset) % N;
+    const size_t opp = (l + offset) % N;
 
-    return static_cast<int>(opp);
+    return opp;
 }
 
 
@@ -610,11 +601,11 @@ void MySimulator::runGameAndKeepScore(const size_t l, const int opp, std::vector
 
 
 //no need of std::ostringstream& oss, cuz can't have recoverable errors here
-void MySimulator::load_and_validate_competition(std::unique_ptr<AbstractGameManager>& GM)
+void MySimulator::load_and_validate_competition(GameManagerFactory GM_factory)
 {
     size_t index = 0;
 
-    //we usr vector gm_libs_, even thought it's only one so file, for convenience (one member, one function, for both comparative and competition mode)
+    //we use vector gm_libs_, even thought it's only one so file, for convenience (one class member, used for both comparative and competition mode)
 
     index = loadGameManagerAndGetIndex(managerPath); //throws an error on failure to open file / load / registrate
     //Grab the entry (we only need them by iterator; no private types leak)
@@ -623,8 +614,8 @@ void MySimulator::load_and_validate_competition(std::unique_ptr<AbstractGameMana
     const auto& GMReg = GameManagerRegistrar::getGameManagerRegistrar();
     auto it = GMReg.begin(); std::advance(it, static_cast<long>(index));
 
-    //Create GM instance, using the registered factories
-    GM = it->createGameManagerFactory(verbose_);
+    //create and keep GM Factory
+    GM_factory = [it](bool verbose) {return it->createGameManagerFactory(verbose);};
 }
 
 void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::vector<AlgoAndScore>& algos_and_scores)
@@ -634,11 +625,11 @@ void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::ve
     //get so files from folder
     std::vector<std::string> algos_so_paths = getSoFilesList(algosFolder);
     if (algos_so_paths.empty()) {
-        throw std::runtime_error((std::string("No .so files in algorithms dir: ") + algosFolder));
+        throw std::runtime_error((std::string("[SIM] No .so files in algorithms dir: ") + algosFolder));
     }
     size_t algos_so_paths_num = algos_so_paths.size();
     if (algos_so_paths_num < 2) {
-        throw std::runtime_error(std::string("There are less than 2 algorithm .so files in the algorithms folder: ") + algosFolder);
+        throw std::runtime_error(std::string("[SIM] There are less than 2 algorithm .so files in the algorithms folder: ") + algosFolder);
     }
 
     //load and validate
@@ -659,9 +650,9 @@ void MySimulator::load_and_validate_competition(std::ostringstream& oss, std::ve
 
     const size_t N = indices.size(); //number of successfully loaded algos, that are going to play
     if (N == 0) {
-        throw std::runtime_error (std::string("All .so files in the algorithms folder: ") + algosFolder + std::string("could not be loaded"));
+        throw std::runtime_error (std::string("[SIM] All .so files in the algorithms folder: ") + algosFolder + std::string("could not be loaded"));
     } else if (N == 1) {
-        throw std::runtime_error (std::string("Only one .so file in the algorithms folder: ") + algosFolder + std::string(" could be loaded"));
+        throw std::runtime_error (std::string("[SIM] Only one .so file in the algorithms folder: ") + algosFolder + std::string(" could be loaded"));
     }
 
     //algos_and_scores - each vector entry holds an AlgoAndScore for a different so file loaded successfully
@@ -700,7 +691,7 @@ void MySimulator::read_maps(std::ostringstream& oss, std::vector<MapParser::MapA
     const size_t maps_num = maps_paths.size();
 
     if (maps_num == 0) {
-        throw std::runtime_error (std::string("There are no no maps file in the maps folder: ") + mapsFolder);
+        throw std::runtime_error (std::string("[SIM] There are no no maps file in the maps folder: ") + mapsFolder);
     }
 
     for (size_t i = 0; i < maps_num; ++i)
@@ -722,7 +713,7 @@ void MySimulator::read_maps(std::ostringstream& oss, std::vector<MapParser::MapA
 
     if (K == 0) { // no maps were read successfully
 
-        throw std::runtime_error (std::string("No maps were read successfully from the maps folder: ") + mapsFolder);
+        throw std::runtime_error (std::string("[SIM] No maps were read successfully from the maps folder: ") + mapsFolder);
     }
 
 }
