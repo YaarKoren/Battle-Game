@@ -25,7 +25,7 @@ namespace UserCommon_207177197_301251571
         static constexpr int AFTER_SHOOT_WAIT_TURNS = 4;
         static constexpr int MOVE_BACK_WAIT_TURNS = 2;
 
-
+        ObjectKind kind() const noexcept override { return ObjectKind::Tank; }
 
         // Getters
         char getSymbol() const override; //each Tank Object will have a different symbol - "1" or "2", by the player it belongs to
@@ -82,7 +82,7 @@ namespace UserCommon_207177197_301251571
         //for creating the output file
         bool getWasKilledThisStep() const {return wasKilledThisStep_;}
         bool getWasLastActionIgnored() const {return wasLastActionIgnored;}
-        void setWasKilledThisStep(bool val) {wasKilledThisStep_ = val;}
+        void setWasKilledThisStep(bool val) override {wasKilledThisStep_ = val;}
         void setWasLastActionIgnored(bool val) {wasLastActionIgnored = val;}
 
 

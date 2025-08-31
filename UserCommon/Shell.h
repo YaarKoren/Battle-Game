@@ -15,6 +15,8 @@ namespace UserCommon_207177197_301251571
 
         bool moveForward() override;
 
+        ObjectKind kind() const noexcept override { return ObjectKind::Shell; }
+
     private:
         int tankId_ = 0;
     };

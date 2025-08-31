@@ -414,15 +414,15 @@ void MyGameManager::resolveShellCollisionsAtPosition(Shell& shell) {
     Position pos = shell.getPosition();
     const auto& objects = board_.getObjectsAt(pos);
     for (const auto& obj : objects) {
-        if (auto* wall = dynamic_cast<Wall*>(obj)) {
-            wall->decreaseLifeLeft();
+        if (obj->kind() == ObjectKind::Wall) {
+            obj->decreaseLifeLeft();
             shell.destroy();
-        } else if (auto* anotherShell = dynamic_cast<Shell*>(obj)) {
-            anotherShell->destroy();
+        } else if (obj->kind() == ObjectKind::Shell) {
+            obj->destroy();
             shell.destroy();
-        } else if (auto* tank = dynamic_cast<Tank*>(obj)) {
-            tank->destroy();
-            tank->setWasKilledThisStep(true);
+        } else if (obj->kind() == ObjectKind::Tank) {
+            obj->destroy();
+            obj->setWasKilledThisStep(true);
             shell.destroy();
         }
     }
@@ -432,14 +432,14 @@ void MyGameManager::resolveTankCollisionsAtPosition(Tank& tank) {
     Position pos = tank.getPosition();
     const auto& objects = board_.getObjectsAt(pos);
     for (const auto& obj : objects) {
-        if (auto* mine = dynamic_cast<Mine*>(obj)) {
-            mine->destroy();
+        if (obj->kind() == ObjectKind::Mine) {
+            obj->destroy();
             tank.destroy();
             tank.setWasKilledThisStep(true);
-        } else if (auto* anotherTank = dynamic_cast<Tank*>(obj)) {
-            if (anotherTank != &tank) {
-                anotherTank->destroy();
-                anotherTank->setWasKilledThisStep(true);
+        } else if (obj->kind() == ObjectKind::Tank) {
+            if (obj != &tank) {
+                obj->destroy();
+                obj->setWasKilledThisStep(true);
                 tank.destroy();
                 tank.setWasKilledThisStep(true);
             }
@@ -477,7 +477,7 @@ void MyGameManager::handleMoveTankForward(Tank& tank) {
 
     const auto& objects = board_.getObjectsAt(newPos);
     for (const auto& obj : objects) {
-        if (dynamic_cast<Wall*>(obj)) {
+        if (obj->kind() == ObjectKind::Wall) {
             tank.setPosition(oldPos);
             tank.setWasLastActionIgnored(true);
             return;
@@ -506,7 +506,7 @@ void MyGameManager::handleMoveTankBack(Tank& tank) {
         //if there is, set last action to ignored and do not move the tank, aka do not change the tank's position
         const auto& objects = board_.getObjectsAt(newPos);
         for (const auto& obj : objects) {
-            if (dynamic_cast<Wall*>(obj)) {
+            if (obj->kind() == ObjectKind::Wall) {
                 tank.setPosition(oldPos);
                 tank.setWasLastActionIgnored(true);
                 return;
@@ -531,7 +531,7 @@ void MyGameManager::handleMoveTankBack(Tank& tank) {
         //if there is, set last action to ignored and do not move the tank, aka do not change the tank's position
         const auto& objects = board_.getObjectsAt(newPos);
         for (const auto& obj : objects) {
-            if (dynamic_cast<Wall*>(obj)) {
+            if (obj->kind() == ObjectKind::Wall) {
                 tank.setPosition(oldPos);
                 return;
             }

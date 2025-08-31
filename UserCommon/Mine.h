@@ -8,6 +8,8 @@ namespace UserCommon_207177197_301251571
     public:
         explicit Mine(Position pos) : GameObject(pos) {}
         char getSymbol() const override { return '@'; }
+
+        ObjectKind kind() const noexcept override { return ObjectKind::Mine; }
     };
 
 }
