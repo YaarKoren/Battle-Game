@@ -33,7 +33,7 @@ GameResult MyGameManager::run(
    max_steps_ = max_steps;
    map_name_ = map_name;
 
-	satelliteViewToBoardAndVectores(map);  //sets board_, p1Tanks_, p2Tanks_, walls_, mines_
+   satelliteViewToBoardAndVectores(map);  //sets board_, p1Tanks_, p2Tanks_, walls_, mines_
                                            // throws an error in case of out of bound access - that means there is a mismathc between the Satellite view and the dims
    									       //Simulator (aka caller) should catch it
 
@@ -99,13 +99,13 @@ void MyGameManager::satelliteViewToBoardAndVectores(const SatelliteView& satelli
                 break;
             }
             case '1': { // player 1 tank
-                auto obj = std::make_unique<Tank>(pos, Direction::Right, 1, ++ tankIdCounter_1);
+                auto obj = std::make_unique<Tank>(pos, Direction::Right, 1, ++ tankIdCounter_1, num_shells_);
                 board_.addGameObject(obj.get(), pos);
                 p1Tanks_.push_back(std::move(obj));
                 break;
             }
             case '2': { // player 2 tank
-                auto obj = std::make_unique<Tank>(pos, Direction::Left, 2, ++ tankIdCounter_2);
+                auto obj = std::make_unique<Tank>(pos, Direction::Left, 2, ++ tankIdCounter_2, num_shells_);
                 board_.addGameObject(obj.get(), pos);
                 p2Tanks_.push_back(std::move(obj));
                 break;
@@ -135,7 +135,7 @@ void MyGameManager::run() {
    	std::ofstream file(output_file_name);          // owns the file (if opened)
    	if (!file) {
               if (verbose_) {
-                std::cerr << "Failed to open output file: " << output_file_name << "\n"
+                std::cerr << "[Game Manager] Failed to open output file: " << output_file_name << "\n"
        	       		<< "Printing results to the screen instead.\n";
               }
 

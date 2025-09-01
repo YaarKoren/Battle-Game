@@ -19,9 +19,8 @@ namespace UserCommon_207177197_301251571
     class Board;   // forward declare
     class Tank : public MovingGameObject {
     public:
-        Tank(Position pos, Direction dir, int playerId, int Id);
+        Tank(Position pos, Direction dir, int playerId, int Id, int numShells);
 
-        static constexpr int SHELLS_NUMBER = 16;
         static constexpr int AFTER_SHOOT_WAIT_TURNS = 4;
         static constexpr int MOVE_BACK_WAIT_TURNS = 2;
 
@@ -51,6 +50,8 @@ namespace UserCommon_207177197_301251571
         void setLastAction(ActionRequest action);
 
         void setBoard(Board* board);
+
+        void setShellsLeft(const int numShells) { shellsLeft_ = numShells; };
 
         // Actions
         bool moveForward() override;
@@ -97,7 +98,7 @@ namespace UserCommon_207177197_301251571
         bool requestedBattleInfo_ = false; //not sure if needed
 
         //shells and shoot state
-        int shellsLeft_ = SHELLS_NUMBER;
+        int shellsLeft_;
         bool isWaitingAfterShoot_ = false; // cool down after shoot
         int waitAfterShootCounter_ = 0;
 

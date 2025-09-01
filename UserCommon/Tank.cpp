@@ -8,14 +8,14 @@
 namespace UserCommon_207177197_301251571 {
 
 
-Tank::Tank(Position pos, Direction dir, int playerId, int id)
-    : MovingGameObject(pos, dir), playerId_(playerId), id_(id) {}
+Tank::Tank(const Position pos, const Direction dir, const int playerId, const int Id, const int numShells)
+    : MovingGameObject(pos, dir), playerId_(playerId), id_(Id), shellsLeft_(numShells) {}
 
 void Tank::setBoard(Board* board) {
 board_ = board;
 }
 
-// Intelligent decision making function
+// Intelligent decision-making function
 ActionRequest Tank::decideNextAction(const std::vector<Tank*>& allTanks) {
     if (!board_) {
         return ActionRequest::DoNothing;
