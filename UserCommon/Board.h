@@ -5,11 +5,6 @@
 
 #include "Position.h"
 #include "GameObject.h"
-#include "Wall.h"
-#include "Tank.h"
-#include "Mine.h"
-#include "Shell.h"
-
 
 
 namespace UserCommon_207177197_301251571 {

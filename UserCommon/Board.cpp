@@ -77,7 +77,6 @@ void Board::clear()
     //for other cases of multiple objects: those cases happens only fot a short time, before the two objects gets destroyed.
     //creating the SatelliteView from the board does not happen during this short times. So, we don't handle those cases).
 //the caller is responsible to pass the char grid in the right size
-//(notice that this function is the reason Board has to know the specific game objects; can move this to Game Manager if it's better)
 void Board::boardToCharGrid(std::vector<std::vector<char>>& char_grid) const
 {
     for (size_t y = 0; y < height_; ++y) {
@@ -97,7 +96,7 @@ void Board::boardToCharGrid(std::vector<std::vector<char>>& char_grid) const
             for (const GameObject* obj : cell) {
                 if (!obj) continue;
                 any = obj; // remember something in case there's no shell
-                if (dynamic_cast<const Shell*>(obj)) {
+                if (obj->kind() == ObjectKind::Shell) {
                     shell = obj;      // shell wins if present
                     break;            // no need to keep scanning
                 }
