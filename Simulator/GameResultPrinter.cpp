@@ -269,5 +269,3 @@ size_t GameResultPrinter::getNumberOfTanks(const GameResult& r, int player) {
     return r.remaining_tanks[player];
 }
 
-
-//-----------------------Competition Mode - helper functions------------------------

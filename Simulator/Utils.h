@@ -20,8 +20,8 @@ struct GMObjectAndName {
     };
 
 struct GMNameAndResult {
-    std::string name; // own the name
-    GameResult  result; // own the result (movable because of unique_ptr)
+   std::string name; // own the name
+   GameResult  result; // own the result (movable because of unique_ptr)
 };
 
 
@@ -54,10 +54,9 @@ struct GMProducer {
 
         GMTask t = (*tasks)[i];
 
-        // capture everything this unit of work needs by value (or safe pointer)
-        return std::function<void()>([=, this]() {
+        return std::function<void()>([=, this]() { //task lambda
             try {
-                // Run this GM exactly once (each task is a distinct GM)
+                // run this GM exactly once (each task is a distinct GM)
                 auto& gm_and_name = (*GMs)[t.gm_index];
                 auto& gm = *gm_and_name.GM;
 
@@ -72,7 +71,11 @@ struct GMProducer {
                 // Store result in its unique slot (no lock)
                 (*results)[t.result_slot].result = std::move(game_result);
             } catch (const std::exception& e) {
-                // TODO log e.what()
+                //(*results)[t.result_slot].result.reset();               // mark as error; After this, [t.result_slot].result.has_value() will be false (commented it out cuz it caused problems we have no time to fix)
+                std::cout << "[SIM] Error during run(): " <<  e.what() << "\n";
+            } catch (...) {
+                //(*results)[t.result_slot].result.reset();
+                std::cout << "[SIM] Error during run(): Unknown\n";
             }
         });
     }
@@ -128,46 +131,51 @@ struct GMCompetitionProducer {
 
         // capture by value pointers/indices; no shared mutation inside
         return std::function<void()>([=, this]() { //task lambda
-            const auto& mapArgs = (*maps_data)[t.map_idx];
+            try
+            {
+                const auto& mapArgs = (*maps_data)[t.map_idx];
 
-            // create fresh instances (cheap & thread-safe)
-            auto gm = gm_factory(verbose);
+                // create fresh instances (cheap & thread-safe)
+                auto gm = gm_factory(verbose);
 
-            // Players for i and j
-           std::unique_ptr<Player> Player1 = (*algos_and_scores)[t.i].player_factory(
-               /*player index*/ 1, mapArgs.map_width_, mapArgs.map_height_, mapArgs.max_steps_, mapArgs.num_shells_);
-           std::unique_ptr<Player> Player2 = (*algos_and_scores)[t.j].player_factory(
-               /*player index*/ 2, mapArgs.map_width_, mapArgs.map_height_, mapArgs.max_steps_, mapArgs.num_shells_);
+                // Players for i and j
+               std::unique_ptr<Player> Player1 = (*algos_and_scores)[t.i].player_factory(
+                   /*player index*/ 1, mapArgs.map_width_, mapArgs.map_height_, mapArgs.max_steps_, mapArgs.num_shells_);
+               std::unique_ptr<Player> Player2 = (*algos_and_scores)[t.j].player_factory(
+                   /*player index*/ 2, mapArgs.map_width_, mapArgs.map_height_, mapArgs.max_steps_, mapArgs.num_shells_);
 
-            // Factories for  i and j
-            auto p1_algo_factory = (*algos_and_scores)[t.i].algo_factory;
-            auto p2_algo_factory = (*algos_and_scores)[t.j].algo_factory;
+                // algo factories for  i and j
+                auto p1_algo_factory = (*algos_and_scores)[t.i].algo_factory;
+                auto p2_algo_factory = (*algos_and_scores)[t.j].algo_factory;
 
-            // Build Players if your GM expects Player&; or your GM may do it internally.
-            // If you need Player instances here, create them fresh as well.
+                // names
+                std::string name1 = (*algos_and_scores)[t.i].name;
+                std::string name2 = (*algos_and_scores)[t.j].name;
 
-            // Names shown in results
-            std::string name1 = (*algos_and_scores)[t.i].name;
-            std::string name2 = (*algos_and_scores)[t.j].name;
+                // Run one game
+                GameResult gr = gm->run(
+                    mapArgs.map_width_, mapArgs.map_height_, *mapArgs.map_, mapArgs.map_name_,
+                    mapArgs.max_steps_, mapArgs.num_shells_,
+                    *Player1, name1,
+                    *Player2 , name2,
+                    p1_algo_factory, p2_algo_factory
+                );
 
-            // Run one game
-            GameResult gr = gm->run(
-                mapArgs.map_width_, mapArgs.map_height_, *mapArgs.map_, mapArgs.map_name_,
-                mapArgs.max_steps_, mapArgs.num_shells_,
-                *Player1, name1,
-                *Player2 , name2,
-                p1_algo_factory, p2_algo_factory
-            );
+                // compute score delta for this single game
+                ScoreDelta d{t.i, t.j, 0, 0};
+                if      (gr.winner == 1) { d.di += 3;  }
+                else if (gr.winner == 2) { d.dj += 3; }
+                else { d.di += 1; d.dj += 1; } // tie
 
-            // Compute score delta for this single game.
-            // Replace this switch with your real scoring logic:
-            ScoreDelta d{t.i, t.j, 0, 0};
-            if      (gr.winner == 1) { d.di += 3;  }
-            else if (gr.winner == 2) { d.dj += 3; }
-            else { d.di += 1; d.dj += 1; } // tie
-
-            // Store in unique slot (no lock)
-            (*deltas)[t.slot] = d;
+                // store in unique slot (no lock)
+                (*deltas)[t.slot] = d;
+            } catch (const std::exception& e)
+            {
+                 (*deltas)[t.slot] = ScoreDelta{t.i, t.j, 0, 0}; // no points
+            } catch (...)
+            {
+                (*deltas)[t.slot] = ScoreDelta{t.i, t.j, 0, 0}; // no points
+            }
         });
     }
 };

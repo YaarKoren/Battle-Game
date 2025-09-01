@@ -51,7 +51,7 @@ namespace UserCommon_207177197_301251571
 
         void setBoard(Board* board);
 
-        void setShellsLeft(const int numShells) { shellsLeft_ = numShells; };
+        //void setShellsLeft(const int numShells) { shellsLeft_ = numShells; };
 
         // Actions
         bool moveForward() override;

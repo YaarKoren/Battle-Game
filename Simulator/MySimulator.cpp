@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
       return 1;
   }
 
-    //---1) run the simulaion
+    //---1) run the simulation
   MySimulator sim(std::move(*args));
   try {
     const int run_res = sim.run();   // no exit(); the run() function catches errors (and on case of error, print error msg and returns 1)
@@ -501,8 +501,8 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
     std::vector<std::string> gm_so_paths = getSoFilesList(managersFolder);
 
     //debug printing
-    std::cerr << "[SIM] gm_so_paths:\n";
-    for (auto& p : gm_so_paths) std::cerr << "  " << p << "\n";
+    //std::cerr << "[SIM] gm_so_paths:\n";
+    //for (auto& p : gm_so_paths) std::cerr << "  " << p << "\n";
 
     if (gm_so_paths.empty()) {
         throw std::runtime_error(std::string("[SIM] No .so files in Game Managers dir:  ") + managersFolder);
@@ -526,8 +526,8 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
     }
 
     //debug printing
-    std::cerr << "[SIM] indices:\n";
-    for (auto i : indices) std::cerr << "  " << i << "\n";
+    //std::cerr << "[SIM] indices:\n";
+    //for (auto i : indices) std::cerr << "  " << i << "\n";
 
     size_t gm_num = indices.size();
     if (gm_num == 0) {

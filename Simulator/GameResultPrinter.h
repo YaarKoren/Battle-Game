@@ -44,7 +44,7 @@ class GameResultPrinter {
     //make unique output name with a unique time stamp
     static std::string makeUniquePath(std::string folder_path, std::string mode_name);
 
-    //Comparative mode - helper functions and structs
+    //-----------------Comparative mode - helper functions and structs----------------------
     struct ResultKey {
         int winner;
         GameResult::Reason reason;
@@ -81,10 +81,6 @@ class GameResultPrinter {
     static std::string reasonToString(GameResult::Reason r);
     static std::string resultMessage(const GameResult& r, size_t max_steps);
     static size_t getNumberOfTanks(const GameResult& r, int player);
-
-
-
-
 };
 
 
