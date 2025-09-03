@@ -15,7 +15,7 @@ MySimulator::MySimulator(CmdArgsParser::CmdArgs args)
 {
     mode_ = args_.mode_;
     verbose_ = args_.verbose_;
-    threads_num_ = args_.threads_num_;
+    threads_num_ = args_.threads_num_; //the threads_num in CmdArgs args is already valid (checked if integer > 1, added the input arg to the main thread; it's always 1 or >=3)
 
     if (mode_ == Mode::Comparative) {
         mapPath        = args_.map_filename_;
@@ -128,7 +128,10 @@ void MySimulator::runComparative(std::ostringstream& oss) {
     std::unique_ptr<SatelliteView> map;
 
     parse_map(oss, map_name, map_width, map_height,
-        max_steps, num_shells, map); //throws an error on bad map data
+        max_steps, num_shells, map); //throws an error on bad map data + prints recoverable errors to file as needed
+
+    //debug printing
+    std::cerr << "[SIM] loaded map successfully\n";
 
     // --- 1) dlopen algorithm .so files (auto-registration happens here) ---
     std::unique_ptr<Player> player1;
@@ -140,74 +143,114 @@ void MySimulator::runComparative(std::ostringstream& oss) {
                                 map_width, map_height, max_steps, num_shells); //throws an error on failure to open file / load / registrate
                                                                                //no need to pass oss, cuz can't have recoverable errors here
 
+    //debug printing
+    std::cerr << "[SIM] loaded algorithm .so files successfully\n";
+
     // --- 2) dlopen all GameManager .so files from folder (auto-register) ---
     std::vector<GMObjectAndName> GMs;
     load_and_validate_comparative(oss, GMs); //throws an error on failure to open file / load / registrate / empty folder
 
+    //debug printing
+    std::cerr << "[SIM] loaded game manager .so files successfully\n";
+
     // --- 3) Run each newly registered GameManager on the single map with both algos ---
-    // ------ Multi Threading ------
-
-    // Build tasks: one per GM
     const size_t GMs_num = GMs.size();
-    std::vector<GMTask> tasks;
-    tasks.reserve(GMs_num); //pre-sizing avoids push_back races
-    for (size_t i = 0; i < GMs_num; ++i) {
-        tasks.push_back(GMTask{ i, i });
-    }
-
-    // Pre-allocate results table (no locks needed)
+    // Pre-allocate results table (no locks needed, in case of Multi threading)
     std::vector<GMNameAndResult> GMs_and_results(GMs_num);
 
-    // Fill names now; results will be filled by workers
-    for (size_t i = 0; i < GMs_num; ++i) {
-        GMs_and_results[i].name = GMs[i].name;
-    }
 
-    //get clean names of the players
-    std::string  player_1_name = getCleanFileName(algo1SO);
-    std::string player_2_name = getCleanFileName(algo2SO);
+    //------------------------------------------Single Thread-----------------------------------------
+    if (threads_num_ == 1)
+    {
+        //debug printing
+        std::cerr << "[SIM] single thread\n";
+        for (const auto& GM_and_name : GMs)
+        {
+            //debug printing
+            std::cerr << "[SIM] about to start game with the game manager:\n"
+            << GM_and_name.name << "\n";
 
-    // Decide how many worker threads to use
-    const int requested = threads_num_; // your MySimulator member
-    const bool single_thread = (requested <= 1);
+            const std::string name = GM_and_name.name;
+            //run game
+            GameResult game_result = GM_and_name.GM->run(
+                    map_width, map_height, *map, map_name,
+                    max_steps, num_shells,
+                    *player1, getCleanFileName(algo1SO), *player1, getCleanFileName(algo2SO),
+                    p1_algo_factory, p2_algo_factory);
 
-    const size_t num_tasks = tasks.size();
+            //debug printing
+            std::cerr << "[SIM] game run finished\n";
 
-    // cap by hardware and utilization
-    int hw = static_cast<int>(std::thread::hardware_concurrency());
-    if (hw <= 0) hw = 8;
-
-    int usable = static_cast<int>(std::min(num_tasks, static_cast<size_t>(requested)));
-    int worker_threads = single_thread ? 0 : std::min(usable, hw);
-
-    // If there are no tasks or only one, fall back to single-thread (utilization rule)
-    if (num_tasks <= 1) {
-        worker_threads = 0;
-    }
-
-    // Build producer
-    GMProducer producer{
-        &tasks, &GMs, &GMs_and_results,
-        player1.get(), player2.get(),
-        p1_algo_factory, p2_algo_factory,
-        &map, map_name,
-        map_width, map_height, max_steps, num_shells,
-        player_1_name, player_2_name
-    };
-
-    // Execute
-    if (worker_threads == 0) {
-        // Single-thread, main only
-        while (auto task = producer.getTask()) {
-            (*task)();
+            //keep name and result
+            GMs_and_results.push_back({name, std::move(game_result)});
+            //debug printing
+            std::cerr << "[SIM] result kept\n";
         }
-    } else {
-        ThreadPoolManager<GMProducer> pool(producer, NumThreads{worker_threads});
-        pool.start();
-        // main thread may just wait (spec allows)
-        pool.wait_till_finish();
     }
 
+
+    // ------------------------------------- Multi Threading --------------------------------------
+    //(inside there is also check of threads_num)
+    else
+    {
+        // Build tasks: one per GM
+
+        std::vector<GMTask> tasks;
+        tasks.reserve(GMs_num); //pre-sizing avoids push_back races
+        for (size_t i = 0; i < GMs_num; ++i) {
+            tasks.push_back(GMTask{ i, i });
+        }
+
+        // Fill names now; results will be filled by workers
+        for (size_t i = 0; i < GMs_num; ++i) {
+            GMs_and_results[i].name = GMs[i].name;
+        }
+
+        //get clean names of the players
+        std::string  player_1_name = getCleanFileName(algo1SO);
+        std::string player_2_name = getCleanFileName(algo2SO);
+
+        // Decide how many worker threads to use
+        const int requested = threads_num_; // your MySimulator member
+        const bool single_thread = (requested <= 1);
+
+        const size_t num_tasks = tasks.size();
+
+        // cap by hardware and utilization
+        int hw = static_cast<int>(std::thread::hardware_concurrency());
+        if (hw <= 0) hw = 8;
+
+        int usable = static_cast<int>(std::min(num_tasks, static_cast<size_t>(requested)));
+        int worker_threads = single_thread ? 0 : std::min(usable, hw);
+
+        // If there are no tasks or only one, fall back to single-thread (utilization rule)
+        if (num_tasks <= 1) {
+            worker_threads = 0;
+        }
+
+        // Build producer
+        GMProducer producer{
+            &tasks, &GMs, &GMs_and_results,
+            player1.get(), player2.get(),
+            p1_algo_factory, p2_algo_factory,
+            &map, map_name,
+            map_width, map_height, max_steps, num_shells,
+            player_1_name, player_2_name
+        };
+
+        // Execute
+        if (worker_threads == 0) {
+            // Single-thread, main only
+            while (auto task = producer.getTask()) {
+                (*task)();
+            }
+        } else {
+            ThreadPoolManager<GMProducer> pool(producer, NumThreads{worker_threads});
+            pool.start();
+            // main thread may just wait (spec allows)
+            pool.wait_till_finish();
+        }
+    }
 
     // --- 4) format results and print them to the output file / screen ---
     GameResultPrinter::printComparativeResults(GMs_and_results, managersFolder,
@@ -501,8 +544,8 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
     std::vector<std::string> gm_so_paths = getSoFilesList(managersFolder);
 
     //debug printing
-    //std::cerr << "[SIM] gm_so_paths:\n";
-    //for (auto& p : gm_so_paths) std::cerr << "  " << p << "\n";
+    std::cerr << "[SIM] gm_so_paths:\n";
+    for (auto& p : gm_so_paths) std::cerr << "  " << p << "\n";
 
     if (gm_so_paths.empty()) {
         throw std::runtime_error(std::string("[SIM] No .so files in Game Managers dir:  ") + managersFolder);
@@ -526,8 +569,8 @@ void MySimulator::load_and_validate_comparative(std::ostringstream& oss, std::ve
     }
 
     //debug printing
-    //std::cerr << "[SIM] indices:\n";
-    //for (auto i : indices) std::cerr << "  " << i << "\n";
+    std::cerr << "[SIM] indices:\n";
+    for (auto i : indices) std::cerr << "  " << i << "\n";
 
     size_t gm_num = indices.size();
     if (gm_num == 0) {
