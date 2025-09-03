@@ -166,16 +166,23 @@ void MySimulator::runComparative(std::ostringstream& oss) {
         std::cerr << "[SIM] single thread\n";
         for (const auto& GM_and_name : GMs)
         {
-            //debug printing
-            std::cerr << "[SIM] about to start game with the game manager:\n"
-            << GM_and_name.name << "\n";
 
             const std::string name = GM_and_name.name;
+
+            //debug printing
+            std::cerr << "[SIM] about to start game with the game manager:\n"
+            << name << "\n";
+
+            std::cerr << "typeid(GM): " << typeid(*GM_and_name.GM).name() << '\n';
+            std::cerr << "sizeof(GameResult)=" << sizeof(GameResult) << '\n';
+            std::cerr << "sizeof(Player)=" << sizeof(Player) << '\n';
+            std::cerr << "sizeof(SatelliteView)=" << sizeof(SatelliteView) << '\n';
+
             //run game
             GameResult game_result = GM_and_name.GM->run(
                     map_width, map_height, *map, map_name,
                     max_steps, num_shells,
-                    *player1, getCleanFileName(algo1SO), *player1, getCleanFileName(algo2SO),
+                    *player1, getCleanFileName(algo1SO), *player2, getCleanFileName(algo2SO),
                     p1_algo_factory, p2_algo_factory);
 
             //debug printing
