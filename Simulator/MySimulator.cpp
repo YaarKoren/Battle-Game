@@ -270,8 +270,8 @@ void MySimulator::runComparative(std::ostringstream& oss) {
 
 void MySimulator::runCompetition(std::ostringstream& oss) {
     // --- 0) dlopen Game Manager .so file (auto-registration happens here) ---
-    GameManagerFactory GM_factory; //get the factory, in order create a fresh GameManager instance per task
-                                            //(spec says GM/Algorithm instances are cheap,  so we don’t reuse a single instance across threads)
+    GameManagerFactory GM_factory; //get the factory, in order create a fresh GameManager instance per game
+                                            //(spec says GM/Algorithm instances are cheap,  so we don’t reuse a single instance across games)
     load_and_validate_competition(GM_factory); //throws an error on failure to open file / load / registrate
                                      //no need to pass oss, cuz can't have recoverable errors here
 
@@ -288,70 +288,129 @@ void MySimulator::runCompetition(std::ostringstream& oss) {
 
 
     // --- 3) for each read map, run games of the N algos on this map, and keep the results
-    //------ Multi Threading ------
+
+    //------------------------------------------Single Thread-----------------------------------------
+    if (threads_num_ == 1 )
+    {
+        //prepare variable for the nested loop
+        std::string map_name;
+        size_t map_width;
+        size_t map_height;
+        size_t max_steps;
+        size_t num_shells;
+        std::unique_ptr<SatelliteView> map;
+        size_t opp;
+
+        bool isOnlyHalfGames;
+
+        for (size_t k = 0; k < K; ++k)
+        {
+            //parse map data we got
+            map_name = maps_data[k].map_name_;
+            map_width = maps_data[k].map_width_;
+            map_height = maps_data[k].map_height_;
+            max_steps = maps_data[k].max_steps_;
+            num_shells = maps_data[k].num_shells_;
+            map = std::move(maps_data[k].map_);
+
+            isOnlyHalfGames = (N % 2 == 0) && (k == N/2 - 1); //  offset == N/2
+            //specs :Note that in the case of k = N/2 - 1 (if N is even),
+            //the pairing for each algorithm in both games would be exactly the same.
+            //You are supposed to run only one game for each pair in this case
+
+            if (isOnlyHalfGames)
+            {
+                for (size_t l = 0; l < N/2; ++l )
+                {
+                    opp = getOpponentIdx(l, k, N);
+                    runGameAndKeepScore(l, opp, algos_and_scores, map_width, map_height,
+                        max_steps, num_shells, map_name,
+                        map, GM_factory(verbose_));
+                }
+            }
+            else
+            {
+                for (size_t l = 0; l < N; ++l )
+                {
+                    opp = getOpponentIdx(l, k, N);
+                    runGameAndKeepScore(l, opp, algos_and_scores, map_width, map_height,
+                         max_steps, num_shells, map_name,
+                         map, GM_factory(verbose_));
+                }
+            }
+
+        }
+
+    }
+
+    // ------------------------------------- Multi Threading --------------------------------------
+    //(inside there is also check of threads_num)
+
     //we don't let threads mutate algos_and_scores directly
     //each task runs one game and returns a score delta result for the two algos
     //after the pool finishes, the main thread folds all deltas into algos_and_scores (pros: no locks needed)
 
+    else
+    {
+        //Build all tasks for all maps
+        std::vector<CompetitionTask> tasks;
+        tasks.reserve(/* upper-bound: K*N */ K * N);
 
-    //Build all tasks for all maps
-    std::vector<CompetitionTask> tasks;
-    tasks.reserve(/* upper-bound: K*N */ K * N);
-
-    for (size_t k = 0; k < K; ++k) {
-        bool isOnlyHalfGames = (N % 2 == 0) && (k == N/2 - 1);  //offset == N/2
-                                                                //specs :Note that in the case of k = N/2 - 1 (if N is even),
-                                                                //the pairing for each algorithm in both games would be exactly the same.
-                                                                //You are supposed to run only one game for each pair in this case
-        if (isOnlyHalfGames) {
-            for (size_t l = 0; l < N/2; ++l) {
-                const size_t opp = getOpponentIdx(l, k, N);
-                tasks.push_back(CompetitionTask{ k, l, opp, tasks.size() });
-            }
-        } else {
-            for (size_t l = 0; l < N; ++l) {
-                const size_t opp = getOpponentIdx(l, k, N);
-                tasks.push_back(CompetitionTask{ k, l, opp, tasks.size() });
+        for (size_t k = 0; k < K; ++k) {
+            bool isOnlyHalfGames = (N % 2 == 0) && (k == N/2 - 1);  //offset == N/2
+            //specs :Note that in the case of k = N/2 - 1 (if N is even),
+            //the pairing for each algorithm in both games would be exactly the same.
+            //You are supposed to run only one game for each pair in this case
+            if (isOnlyHalfGames) {
+                for (size_t l = 0; l < N/2; ++l) {
+                    const size_t opp = getOpponentIdx(l, k, N);
+                    tasks.push_back(CompetitionTask{ k, l, opp, tasks.size() });
+                }
+            } else {
+                for (size_t l = 0; l < N; ++l) {
+                    const size_t opp = getOpponentIdx(l, k, N);
+                    tasks.push_back(CompetitionTask{ k, l, opp, tasks.size() });
+                }
             }
         }
-    }
 
-    // Pre-allocate one result cell per task (avoids locking)
-    std::vector<ScoreDelta> deltas(tasks.size());
+        // Pre-allocate one result cell per task (avoids locking)
+        std::vector<ScoreDelta> deltas(tasks.size());
 
-    //execute
-    const int requested = threads_num_;            // your member
-    const bool single_thread = (requested <= 1);
+        //execute
+        const int requested = threads_num_;            // your member
+        const bool single_thread = (requested <= 1);
 
-    const size_t num_tasks = tasks.size();
-    int hw = (int)std::thread::hardware_concurrency();
-    if (hw <= 0) hw = 8;
+        const size_t num_tasks = tasks.size();
+        int hw = (int)std::thread::hardware_concurrency();
+        if (hw <= 0) hw = 8;
 
-    // cap workers by tasks and hardware
-    int usable = (int)std::min(num_tasks, (size_t)requested);
-    int worker_threads = single_thread ? 0 : std::min(usable, hw);
-    if (num_tasks <= 1) worker_threads = 0; // no point in workers
+        // cap workers by tasks and hardware
+        int usable = (int)std::min(num_tasks, (size_t)requested);
+        int worker_threads = single_thread ? 0 : std::min(usable, hw);
+        if (num_tasks <= 1) worker_threads = 0; // no point in workers
 
-    // Build producer
-    GMCompetitionProducer producer{
-        &tasks, &deltas,
-        verbose_,
-        &maps_data, &algos_and_scores,
-        GM_factory
-    };
+        // Build producer
+        GMCompetitionProducer producer{
+            &tasks, &deltas,
+            verbose_,
+            &maps_data, &algos_and_scores,
+            GM_factory
+        };
 
-    if (worker_threads == 0) {
-        while (auto task = producer.getTask()) (*task)();
-    } else {
-        ThreadPoolManager<GMCompetitionProducer> pool(producer, NumThreads{worker_threads});
-        pool.start();
-        pool.wait_till_finish();
-    }
+        if (worker_threads == 0) {
+            while (auto task = producer.getTask()) (*task)();
+        } else {
+            ThreadPoolManager<GMCompetitionProducer> pool(producer, NumThreads{worker_threads});
+            pool.start();
+            pool.wait_till_finish();
+        }
 
-    //Aggregate the results (this part is single-threaded)
-    for (const auto& d : deltas) {
-        algos_and_scores[d.i].score += d.di;
-        algos_and_scores[d.j].score += d.dj;
+        //Aggregate the results (this part is single-threaded)
+        for (const auto& d : deltas) {
+            algos_and_scores[d.i].score += d.di;
+            algos_and_scores[d.j].score += d.dj;
+        }
     }
 
     // --- 4) format results and print them to the output file / screen ---
@@ -652,7 +711,7 @@ void MySimulator::runGameAndKeepScore(const size_t l, const int opp, std::vector
     const GameResult game_result = GM->run(
         map_width, map_height, *map, map_name,
         max_steps, num_shells,
-        *player1, algos_and_scores[l].name, *player1, algos_and_scores[opp].name,
+        *player1, algos_and_scores[l].name, *player2, algos_and_scores[opp].name,
         algos_and_scores[l].algo_factory, algos_and_scores[opp].algo_factory);
 
     //check the result and score accordingly

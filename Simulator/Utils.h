@@ -2,6 +2,8 @@
 
 #include <string>
 #include <atomic>
+#include <optional>
+#include <functional>
 
 #include "../common/GameResult.h"
 #include "../common/AbstractGameManager.h"
