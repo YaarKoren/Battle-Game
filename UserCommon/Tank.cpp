@@ -1,6 +1,7 @@
 #include <fstream>
 #include <memory>
 #include <vector>
+#include  <climits>
 
 #include "Tank.h"
 #include "Board.h"

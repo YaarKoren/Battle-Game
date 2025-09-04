@@ -1,4 +1,3 @@
-#include "MyGameManager.h"
 #include <iostream>
 #include <fstream>
 #include <utility>
@@ -9,10 +8,16 @@
 #include <exception>
 #include <optional>
 #include <fstream>
+#include <vector>
+#include  <climits>
 
-using namespace UserCommon_207177197_301251571;
+
+#include "../UserCommon/SatelliteViewImpl.h"
+#include "MyGameManager.h"
 
 namespace GameManager_207177197_301251571 {
+
+using namespace UserCommon_207177197_301251571;
 
 MyGameManager::MyGameManager(bool verbose) :  verbose_(verbose),
     board_(1, 1) // meaningless initiazlization just to make it work
@@ -321,7 +326,7 @@ void MyGameManager::handleRequestBattleInfo(Tank& tank) {
     //create a 2D char representation of the board
     board_.boardToCharGrid(char_grid); //does not change board_ ; changes only the char grid
     //create a SatelliteViewImpl from it
-    SatelliteViewImpl satellite(char_grid);
+    auto satellite = std::make_unique<SatelliteViewImpl>(char_grid);
 
     //determine which player owns this tank
     int playerId = tank.getPlayerId();
@@ -337,7 +342,7 @@ void MyGameManager::handleRequestBattleInfo(Tank& tank) {
                   + std::to_string(tank.getId())
            );
         }
-       	player->updateTankWithBattleInfo(*tank.getAlgorithm(), satellite);
+       	player->updateTankWithBattleInfo(*tank.getAlgorithm(), *satellite);
     }
 
     tank.setLastAction(ActionRequest::GetBattleInfo);
