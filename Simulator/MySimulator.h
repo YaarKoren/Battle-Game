@@ -89,7 +89,7 @@ private:
 
 
     //competition mode  helper functions
-    void load_and_validate_competition(GameManagerFactory GM_factory);
+    void load_and_validate_competition(GameManagerFactory& GM_factory);
     void load_and_validate_competition(std::ostringstream& oss, std::vector<AlgoAndScore>& algos_and_scores);
     void read_maps(std::ostringstream& oss, std::vector<MapParser::MapArgs>& maps_data) const;
 
