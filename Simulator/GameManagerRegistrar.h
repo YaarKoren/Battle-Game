@@ -19,7 +19,7 @@ class GameManagerRegistrar {
 
         const std::string& name() const { return so_name_    ; }
 
-        std::unique_ptr<AbstractGameManager> createGameManagerFactory(bool verbose) const {
+        std::unique_ptr<AbstractGameManager> createGameManager(bool verbose) const {
             return GMFactory_(verbose);
         }
 
