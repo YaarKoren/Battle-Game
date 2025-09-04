@@ -8,7 +8,20 @@ CXXFLAGS := -std=c++20 -Wall -Wextra -Werror -pedantic -O2 -fPIC
 LDFLAGS  := -shared
 LDLIBS   :=
 
-SRCS := $(wildcard *.cpp) $(wildcard ../Userבג ץץCommon/*.cpp)
+# Add every .cpp that DEFINES symbols you call from the GM
+GM_SRC := \
+    MyGameManager.cpp \
+    ../UserCommon/Board.cpp \
+    ../UserCommon/MyBattleInfo.cpp \
+    ../UserCommon/SatelliteViewImpl.cpp \
+    ../UserCommon/Shell.cpp \
+    ../UserCommon/Tank.cpp
+
+
+GM_OBJ := $(GM_SRC:.cpp=.o)
+GM_DEP := $(GM_OBJ:.o=.d)
+
+SRCS := $(wildcard *.cpp) $(wildcard ../UserCommon/*.cpp)
 OBJS := $(SRCS:.cpp=.o)
 
 .PHONY: all clean
