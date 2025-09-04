@@ -33,3 +33,4 @@ private:
     static std::unique_ptr<SatelliteView> parseMap(std::vector<std::string>&lines, size_t height, size_t width,
         std::ostringstream& oss, const std::string& filename);
 };
+

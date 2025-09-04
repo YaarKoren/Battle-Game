@@ -66,29 +66,31 @@ std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata
 
     std::string map_name = lines[0];
 
-    std::string line;
-
     size_t max_steps  = 0;
     size_t num_shells = 0;
     size_t map_height = 0;
     size_t map_width  = 0;
 
     for (int i = 1; i <= 4; ++i) {
-        std::string m = lines.at(i);
+        std::string line = lines.at(i);
 
-        // erase all spaces/tabs etc. for key=value
-        m.erase(std::remove_if(m.begin(), m.end(),
-                               [](unsigned char ch){ return std::isspace(ch); }), m.end());
+        // erase all spaces/tabs etc. for key=value (to tolerates spaces around "=")
+        line.erase(std::remove_if(line.begin(), line.end(),
+                               [](unsigned char ch){ return std::isspace(ch); }), line.end());
 
 
 
-        =const auto eqPos = line.find('=');
+        const auto eqPos = line.find('=');
         if (eqPos == std::string::npos) {
             throw std::runtime_error(std::string("Malformed metadata line in the map input file: ") + filename);
         }
 
-        const std::string key = line.substr(0, eqPos);
-        const std::string value = line.substr(eqPos + 1);
+        std::string key = line.substr(0, eqPos);
+        std::string value = line.substr(eqPos + 1);
+
+        if (key.empty() || value.empty())
+            throw std::runtime_error("Empty key or value in metadata in " + filename + ": '" + line + "'");
+
 
         long long tmp;
         try {
@@ -103,7 +105,7 @@ std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata
                 + std::to_string(i) + std::string("in the map input file: ") + filename);
         }
 
-        const auto val= static_cast<size_t>(tmp);
+        const auto val = static_cast<size_t>(tmp);
         if (key == "MaxSteps")        max_steps  = static_cast<size_t>(val);
         else if (key == "NumShells")  num_shells = static_cast<size_t>(val);
         else if (key == "Rows")       map_height = static_cast<size_t>(val);
