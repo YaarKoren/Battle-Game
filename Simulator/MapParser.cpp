@@ -27,6 +27,10 @@ MapParser::MapArgs MapParser::parse(const std::string& filename, std::ostringstr
     std::vector<std::string> lines;
 
     while (std::getline(file, line)) {
+        // Keep empty lines too; don't filter here
+        // Also strip a trailing '\r' (Windows files)
+        if (!line.empty() && !line.back()) {} // no-op, just showing intent
+        if (!line.empty() && line.back() == '\r') line.pop_back();
         if (!line.empty()) lines.push_back(line);
     }
 
@@ -43,13 +47,10 @@ MapParser::MapArgs MapParser::parse(const std::string& filename, std::ostringstr
         throw std::runtime_error(e.what());
     }
 
-    try
-    {
+    try {
         args.map_ = parseMap(lines, args.map_height_, args.map_width_, oss, filename);
-    }
-    catch (const std::exception& e)
-    {
-    throw std::runtime_error(e.what());
+    } catch (const std::exception& e) {
+        throw std::runtime_error(e.what());
     }
 
     return args;
@@ -73,28 +74,36 @@ std::tuple<std::string, size_t, size_t, size_t, size_t> MapParser::parseMetadata
     size_t map_width  = 0;
 
     for (int i = 1; i <= 4; ++i) {
-        line = lines[i];
-        line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end()); // remove all spaces
+        std::string m = lines.at(i);
 
-        size_t eqPos = line.find('=');
+        // erase all spaces/tabs etc. for key=value
+        m.erase(std::remove_if(m.begin(), m.end(),
+                               [](unsigned char ch){ return std::isspace(ch); }), m.end());
+
+
+
+        =const auto eqPos = line.find('=');
         if (eqPos == std::string::npos) {
             throw std::runtime_error(std::string("Malformed metadata line in the map input file: ") + filename);
         }
 
-        std::string key = line.substr(0, eqPos);
-        std::string value = line.substr(eqPos + 1);
+        const std::string key = line.substr(0, eqPos);
+        const std::string value = line.substr(eqPos + 1);
 
-        int val;
+        long long tmp;
         try {
-            val = std::stoi(value);
+            tmp = std::stoll(value);
         } catch (const std::exception&) {
-            throw std::runtime_error(std::string("Non-integer value in metadata line: ") + line + std::string("in the map input file: ") + filename);
+            throw std::runtime_error(std::string("Non-integer value in metadata line: ")
+                + std::to_string(i) + std::string("in the map input file: ") + filename);
         }
 
-        if (val < 0) {
-            throw std::runtime_error(std::string("Negative value in metadata line: ") + line + std::string("in the map input file: ") + filename);
+        if (tmp < 0) {
+            throw std::runtime_error(std::string("Negative value in metadata line: ")
+                + std::to_string(i) + std::string("in the map input file: ") + filename);
         }
 
+        const auto val= static_cast<size_t>(tmp);
         if (key == "MaxSteps")        max_steps  = static_cast<size_t>(val);
         else if (key == "NumShells")  num_shells = static_cast<size_t>(val);
         else if (key == "Rows")       map_height = static_cast<size_t>(val);
@@ -165,8 +174,9 @@ std::unique_ptr<SatelliteView> MapParser::parseMap(std::vector<std::string>& lin
     }
 
     // Report recoverable errors
-    if ( (ignored_rows > 0) || (autofilled_rows > 0) || (autofilled_cols > 0) || (invalid_chars > 0)
-    || (invalid_chars > 0) )
+    if ( (ignored_rows > 0) || (autofilled_rows > 0)
+        || (ignored_cols > 0) ||(autofilled_cols > 0)
+        || (invalid_chars > 0) )
     {
         oss << "Recoverable errors found in the map input file: " << filename << ":\n";
     }
