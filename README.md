@@ -1,4 +1,4 @@
-# Tank Battle Simulator (C++)
+#  Battle Game (C++)
 
 ## Project Structure
 
@@ -50,4 +50,5 @@ algorithm2=<algorithm_so_filename> \
 game_manager=<game_manager_so_filename> \
 algorithms_folder=<algorithms_folder> \
 [num_threads=<num>] [-verbose]
+
 
