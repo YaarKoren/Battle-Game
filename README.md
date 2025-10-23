@@ -22,7 +22,7 @@ This part explains how to build and run the different parts of the assignment fr
 
 Note: assume using Linux/WSL (Ubuntu).
 
-***Build***
+### Build
 from project root:
 make all
 
@@ -31,10 +31,11 @@ Simulator/simulator_207177197_301521571 – main simulator executable
 GameManager/libGameManager_207177197_301521571.so – GM dynamic library
 Algorithm/libAlgorithm_207177197_301521571.so – Algorithma and layer dynamic library
 
-***Run***
+### Run
 from Simulator directory:
 
-Comparative run: 
+**Comparative run**
+
 ./simulator_207177197_301521571 -comparative \
 game_map=<game_map_filename> \
 game_managers_folder=<game_managers_folder> \
@@ -42,9 +43,11 @@ algorithm1=<algorithm_so_filename> \
 algorithm2=<algorithm_so_filename> \
 [num_threads=<num>] [-verbose]
 
-Competition run: 
+**Competition run** 
+
 ./simulator_207177197_301521571 \
 -competition game_maps_folder=<game_maps_folder> \
 game_manager=<game_manager_so_filename> \
 algorithms_folder=<algorithms_folder> \
 [num_threads=<num>] [-verbose]
+
